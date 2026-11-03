@@ -78,12 +78,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webki
 .gate.fade{opacity:0;pointer-events:none}
 .gate__kicker{opacity:0;color:#e9cdb2;animation:rise 1.2s .25s var(--ease) forwards}
 .gate__hint{font-family:var(--serif);font-style:italic;font-size:clamp(1.25rem,1rem + 1vw,1.7rem);opacity:0;animation:rise 1.2s 1s var(--ease) forwards}
-.gate__sound{display:flex;align-items:center;gap:.7em;max-width:min(88vw,27em);padding:.72em 1.25em;border-radius:22px;text-align:left;font-family:var(--text);font-weight:500;font-size:clamp(1.14rem,1.02rem + .55vw,1.38rem);line-height:1.25;color:#fff4e4;background:rgba(246,234,219,.1);box-shadow:inset 0 0 0 1px rgba(246,234,219,.34);opacity:0;animation:rise 1.2s 1.25s var(--ease) forwards}
-.gate__sound svg{flex:none;width:1.65em;height:1.65em;overflow:visible}
-.gate__sound .spk{fill:var(--amber)}
-.gate__sound .w1,.gate__sound .w2{fill:none;stroke:var(--amber);stroke-width:1.8;stroke-linecap:round;animation:wave 1.7s ease-in-out infinite}
-.gate__sound .w2{animation-delay:.28s}
-@keyframes wave{0%,100%{opacity:.3}50%{opacity:1}}
+.gate__sound{max-width:min(88vw,38em);color:#f0d9c0;font-size:clamp(.86rem,.8rem + .3vw,1.02rem);text-wrap:balance;opacity:0;animation:rise 1.2s 1.25s var(--ease) forwards}
 .sv-desk{display:none}
 @media (hover:hover) and (min-width:900px){.sv-phone{display:none}.sv-desk{display:inline}}
 .gate__kicker,.gate__hint,.gate__sound{transition:opacity .5s}
