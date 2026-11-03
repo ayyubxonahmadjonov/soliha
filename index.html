@@ -18,7 +18,7 @@
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/HerrVonMuellerhoff-normal.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/Allura-normal.woff2" crossorigin>
 <link rel="preload" as="image" href="assets/img/hero-800.webp" imagesrcset="assets/img/hero-800.webp 800w, assets/img/hero-1500.webp 1285w" imagesizes="100vw">
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=11">
 <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
@@ -101,12 +101,12 @@
 <nav class="chain" id="chain" aria-label="Bo‘limlar">
   <span class="chain__line"><i></i></span>
   <a href="#bayram" title="Bayram"><svg><use href="#star"/></svg></a>
+  <a href="#balandlik" title="Balandlik"><svg><use href="#star"/></svg></a>
   <a href="#xatlar" title="Xatlar"><svg><use href="#star"/></svg></a>
+  <a href="#tun" title="Tun"><svg><use href="#star"/></svg></a>
   <a href="#menyu" title="Menyu"><svg><use href="#star"/></svg></a>
   <a href="#uslub" title="Uslub"><svg><use href="#star"/></svg></a>
-  <a href="#balandlik" title="Balandlik"><svg><use href="#star"/></svg></a>
   <a href="#oqshom" title="Oqshom"><svg><use href="#star"/></svg></a>
-  <a href="#tun" title="Tun"><svg><use href="#star"/></svg></a>
 </nav>
 
 <main id="main">
@@ -122,7 +122,6 @@
     <h1 class="hero__name"><span class="script foil">Soliha</span></h1>
     <p class="hero__lead">Bir nechta lahza, bitta qo‘shiq va kechikkan tabrik.</p>
   </div>
-  <p class="mono hero__cue"><span></span>Pastga suring</p>
 </header>
 
 <!-- ===================== WORDS ===================== -->
@@ -182,24 +181,82 @@
   </div>
 </section>
 
-<!-- ===================== II. XATLAR ===================== -->
-<section class="letters" id="xatlar" data-theme="dark">
+<!-- ===================== II. BALANDLIK ===================== -->
+<section class="sky" id="balandlik" data-theme="sky">
+  <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
   <div class="wrap">
-    <p class="chap rv"><b>II</b><i></i>Xatlar</p>
-    <h2 class="sec-title rv">Besh xat. <em>Har birini oching.</em></h2>
-    <p class="letters__sub rv">Ichida bittadan lahza va bir nechta muhim ma’lumot bor.</p>
-    <div class="deck" id="deck"></div>
-    <p class="letters__reward" id="reward">Hamma xat o‘qildi. Endi desertga o‘tsak bo‘ladi.</p>
+    <p class="chap rv"><b>II</b><i></i>Balandlik</p>
+    <h2 class="sky__title rv">Tepada havo <em>boshqacha.</em></h2>
+    <div class="sky__grid">
+      <figure class="sky__a" data-speed="-.06">
+        <div class="rv-img"><img alt="Soliha quyosh ko‘zoynagi va bordo paltoda, orqada tog‘ va bulutlar" src="assets/img/shades-800.webp" loading="lazy" decoding="async"></div>
+        <figcaption>Ko‘zoynakda tog‘lar, paltoda kuz.</figcaption>
+      </figure>
+      <figure class="sky__b">
+        <div class="rv-img"><img alt="Soliha orqasi bilan tog‘ cho‘qqisida turibdi, sochlarini shamol uchirmoqda" src="assets/img/ridge-800.webp" loading="lazy" decoding="async"></div>
+        <figcaption>Bu yerda shamol ham kadrga kirishni xohladi.</figcaption>
+      </figure>
+      <figure class="sky__c" data-speed=".07">
+        <div class="rv-img"><img alt="Soliha yon tomondan, ko‘zoynakda, uzoqdagi tog‘larga qarab turibdi" src="assets/img/profile-800.webp" loading="lazy" decoding="async"></div>
+        <figcaption>Uzoqqa qaraganda hamma narsa osonroq ko‘rinadi.</figcaption>
+      </figure>
+    </div>
+    <p class="sky__wish rv">Yo‘llaringiz shu manzaradek keng, ko‘nglingiz shu osmondek ochiq bo‘lsin.</p>
   </div>
 </section>
 
-<!-- ===================== III. MENYU ===================== -->
+<!-- karting -->
+<section class="kart" data-theme="dark">
+  <div class="checker" aria-hidden="true"></div>
+  <div class="wrap kart__in">
+    <div class="kart__num" aria-hidden="true">5</div>
+    <figure class="kart__photo"><div class="rv-img"><img alt="Soliha karting mashinasida, 5-raqam, dubulg‘asi yonida" src="assets/img/kart-800.webp" srcset="assets/img/kart-800.webp 800w, assets/img/kart-1500.webp 960w" sizes="(min-width:900px) 40vw, 92vw" loading="lazy" decoding="async"></div></figure>
+    <div class="kart__copy">
+      <p class="mono rv">Poygadan oldin</p>
+      <h2 class="kart__title rv">Start.</h2>
+      <p class="rv">Dubulg‘a qo‘lda, rul oldida, shoshilish yo‘q. Chunki marra baribir sizniki.</p>
+    </div>
+  </div>
+  <div class="checker" aria-hidden="true"></div>
+</section>
+
+<!-- ===================== III. XATLAR ===================== -->
+<section class="letters" id="xatlar" data-theme="dark">
+  <div class="wrap">
+    <p class="chap rv"><b>III</b><i></i>Xatlar</p>
+    <h2 class="sec-title rv">Besh xat. <em>Har birini oching.</em></h2>
+    <p class="letters__sub rv">Ichida bittadan lahza va bir nechta muhim ma’lumot bor.</p>
+    <div class="deck" id="deck"></div>
+    <p class="letters__reward" id="reward">Hamma xat o‘qildi. Endi biroz dam olsak bo‘ladi.</p>
+  </div>
+</section>
+
+<!-- ===================== IV. TUN ===================== -->
+<section class="sleep" id="tun" data-theme="dark">
+  <canvas class="stars" data-stars="150" aria-hidden="true"></canvas>
+  <i class="moon"></i>
+  <div class="wrap sleep__in">
+    <p class="chap rv"><b>IV</b><i></i>Tun</p>
+    <p class="sleep__shh script foil rv">Shsh…</p>
+    <figure class="sleep__photo rv">
+      <img alt="Soliha yumshoq oq jun ichida tinchgina uxlab yotibdi" src="assets/img/sleep-800.webp" loading="lazy" decoding="async">
+    </figure>
+    <div class="sleep__text">
+      <p class="sleep__big rv">Bugungi kunning hamma tashvishi shu yerda to‘xtasin.</p>
+      <p class="rv">Yumshoq jun, iliq sukunat va bir necha soatlik xotirjamlik. Boshqa hech narsa kerak emas.</p>
+      <p class="rv">Tushingizga faqat yaxshi narsalar kirsin: tog‘lar, gullar, mazali desert.</p>
+      <p class="sleep__night script foil rv">Shirin tushlar, Soliha</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== V. MENYU ===================== -->
 <section class="menu" id="menyu" data-theme="light">
   <div class="scallop" aria-hidden="true"></div>
   <div class="wrap menu__in">
-    <p class="chap rv"><b>III</b><i></i>Menyu</p>
+    <p class="chap rv"><b>V</b><i></i>Menyu</p>
     <header class="menu__head">
-      <p class="mono rv">Bugungi menyu <svg class="st"><use href="#star"/></svg> bosh oshpaz: kayfiyat</p>
+      <p class="mono rv">Uyg‘ondingizmi? Menyu tayyor <svg class="st"><use href="#star"/></svg> bosh oshpaz: kayfiyat</p>
       <h2 class="menu__title script rv">Yoqimli ishtaha!</h2>
     </header>
     <div class="dishes">
@@ -233,11 +290,11 @@
   </div></div>
 </section>
 
-<!-- ===================== IV. USLUB ===================== -->
+<!-- ===================== VI. USLUB ===================== -->
 <section class="style" id="uslub" data-theme="dark">
   <div class="wrap style__grid">
     <div class="style__copy">
-      <p class="chap rv"><b>IV</b><i></i>Uslub</p>
+      <p class="chap rv"><b>VI</b><i></i>Uslub</p>
       <h2 class="sec-title rv">Kuzning eng chiroyli <em>soni.</em></h2>
       <p class="rv">Muqova, uchta sahifa va bir nechta jiddiy maslahat. Sotuvda yo‘q. Tiraji: bitta nusxa.</p>
       <p class="mono style__hint rv">Sahifani bosib varaqlang</p>
@@ -294,87 +351,32 @@
           <div class="barcode" aria-hidden="true"></div>
         </article>
       </div>
-      <div class="mag-nav">
-        <button type="button" id="magPrev" aria-label="Oldingi sahifa">←</button>
-        <span class="mono" id="magCount">1 / 5</span>
-        <button type="button" id="magNext" aria-label="Keyingi sahifa">→</button>
+      <div class="nav mag-nav">
+        <button class="nav-prev" type="button" id="magPrev" aria-label="Oldingi sahifa"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
+        <span class="nav-count" id="magCount">1 / 5</span>
+        <button class="nav-next nudge" type="button" id="magNext"><span id="magNextLabel">Keyingi sahifa</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===================== V. BALANDLIK ===================== -->
-<section class="sky" id="balandlik" data-theme="sky">
-  <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
-  <div class="wrap">
-    <p class="chap rv"><b>V</b><i></i>Balandlik</p>
-    <h2 class="sky__title rv">Tepada havo <em>boshqacha.</em></h2>
-    <div class="sky__grid">
-      <figure class="sky__a" data-speed="-.06">
-        <div class="rv-img"><img alt="Soliha quyosh ko‘zoynagi va bordo paltoda, orqada tog‘ va bulutlar" src="assets/img/shades-800.webp" loading="lazy" decoding="async"></div>
-        <figcaption>Ko‘zoynakda tog‘lar, paltoda kuz.</figcaption>
-      </figure>
-      <figure class="sky__b">
-        <div class="rv-img"><img alt="Soliha orqasi bilan tog‘ cho‘qqisida turibdi, sochlarini shamol uchirmoqda" src="assets/img/ridge-800.webp" loading="lazy" decoding="async"></div>
-        <figcaption>Bu yerda shamol ham kadrga kirishni xohladi.</figcaption>
-      </figure>
-      <figure class="sky__c" data-speed=".07">
-        <div class="rv-img"><img alt="Soliha yon tomondan, ko‘zoynakda, uzoqdagi tog‘larga qarab turibdi" src="assets/img/profile-800.webp" loading="lazy" decoding="async"></div>
-        <figcaption>Uzoqqa qaraganda hamma narsa osonroq ko‘rinadi.</figcaption>
-      </figure>
-    </div>
-    <p class="sky__wish rv">Yo‘llaringiz shu manzaradek keng, ko‘nglingiz shu osmondek ochiq bo‘lsin.</p>
-  </div>
-</section>
-
-<!-- karting -->
-<section class="kart" data-theme="dark">
-  <div class="checker" aria-hidden="true"></div>
-  <div class="wrap kart__in">
-    <div class="kart__num" aria-hidden="true">5</div>
-    <figure class="kart__photo"><div class="rv-img"><img alt="Soliha karting mashinasida, 5-raqam, dubulg‘asi yonida" src="assets/img/kart-800.webp" srcset="assets/img/kart-800.webp 800w, assets/img/kart-1500.webp 960w" sizes="(min-width:900px) 40vw, 92vw" loading="lazy" decoding="async"></div></figure>
-    <div class="kart__copy">
-      <p class="mono rv">Poygadan oldin</p>
-      <h2 class="kart__title rv">Start.</h2>
-      <p class="rv">Dubulg‘a qo‘lda, rul oldida, shoshilish yo‘q. Chunki marra baribir sizniki.</p>
-    </div>
-  </div>
-  <div class="checker" aria-hidden="true"></div>
-</section>
-
-<!-- ===================== VI. OQSHOM ===================== -->
+<!-- ===================== VII. OQSHOM ===================== -->
 <section class="night" id="oqshom" data-theme="dark">
   <div class="night__pin">
     <div class="night__frame"><img alt="Soliha kechqurun daryo bo‘yida, bordo paltoda, orqada shahar chiroqlari" src="assets/img/night-800.webp" srcset="assets/img/night-800.webp 800w, assets/img/night-1500.webp 1440w" sizes="100vw" loading="lazy" decoding="async"></div>
     <div class="night__veil"></div>
     <div class="night__copy">
-      <p class="chap"><b>VI</b><i></i>Oqshom</p>
+      <p class="chap"><b>VII</b><i></i>Oqshom</p>
       <h2>Shahar chiroqlari yondi.</h2>
       <p class="night__joke"><span>Kayfiyat:</span> «meni suratga olma».<br><span>Natija:</span> eng yaxshi kadrlardan biri.</p>
     </div>
   </div>
 </section>
 
-<!-- ===================== VII. TUN ===================== -->
-<section class="sleep" id="tun" data-theme="dark">
-  <canvas class="stars" data-stars="150" aria-hidden="true"></canvas>
-  <i class="moon"></i>
-  <div class="wrap sleep__in">
-    <p class="chap rv"><b>VII</b><i></i>Tun</p>
-    <p class="sleep__shh script foil rv">Shsh…</p>
-    <figure class="sleep__photo rv">
-      <img alt="Soliha yumshoq oq jun ichida tinchgina uxlab yotibdi" src="assets/img/sleep-800.webp" loading="lazy" decoding="async">
-    </figure>
-    <div class="sleep__text">
-      <p class="sleep__big rv">Bugungi kunning hamma tashvishi shu yerda to‘xtasin.</p>
-      <p class="rv">Yumshoq jun, iliq sukunat va bir necha soatlik xotirjamlik. Boshqa hech narsa kerak emas.</p>
-      <p class="rv">Tushingizga faqat yaxshi narsalar kirsin: tog‘lar, gullar, yana bitta desert.</p>
-      <p class="sleep__night script foil rv">Shirin tushlar, Soliha</p>
-    </div>
-  </div>
-
-  <!-- ending -->
-  <div class="end" id="end">
+<!-- ===================== YAKUN ===================== -->
+<section class="finale" id="end" data-theme="dark">
+  <canvas class="stars" data-stars="100" aria-hidden="true"></canvas>
+  <div class="end">
     <svg class="necklace" viewBox="0 0 240 330" aria-hidden="true">
       <path class="necklace__chain" pathLength="1" d="M4 0C30 62 78 104 120 118 162 104 210 62 236 0"/>
       <path class="necklace__chain" pathLength="1" d="M120 118v150"/>
@@ -414,15 +416,15 @@
     <div class="seal seal--static"><svg viewBox="0 0 100 100"><use href="#seal-art"/></svg></div>
   </div>
   <p class="letter__note" id="lNote"></p>
-  <div class="letter__nav">
-    <button type="button" id="lPrev" aria-label="Oldingi xat">←</button>
-    <span class="mono" id="lCount"></span>
-    <button type="button" id="lNext" aria-label="Keyingi xat">→</button>
+  <div class="nav letter__nav">
+    <button class="nav-prev" type="button" id="lPrev" aria-label="Oldingi xat"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
+    <span class="nav-count" id="lCount"></span>
+    <button class="nav-next nudge" type="button" id="lNext"><span id="lNextLabel">Keyingi xat</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
   </div>
 </dialog>
 
 <canvas id="petals" aria-hidden="true"></canvas>
 <noscript><style>.gate,.iris{display:none}html.locked,html.locked body{overflow:auto;height:auto}</style></noscript>
-<script src="js/app.js?v=6"></script>
+<script src="js/app.js?v=11"></script>
 </body>
 </html>
