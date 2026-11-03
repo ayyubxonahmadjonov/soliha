@@ -4,6 +4,7 @@
 @font-face{font-family:"Newsreader";src:url(../assets/fonts/Newsreader-normal.woff2) format("woff2");font-weight:300 500;font-style:normal;font-display:swap}
 @font-face{font-family:"Newsreader";src:url(../assets/fonts/Newsreader-italic.woff2) format("woff2");font-weight:300 500;font-style:italic;font-display:swap}
 @font-face{font-family:"DM Mono";src:url(../assets/fonts/DMMono-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Allura";src:url(../assets/fonts/Allura-normal.woff2) format("woff2");font-weight:400;font-display:block}
 @font-face{font-family:"Herr Von Muellerhoff";src:url(../assets/fonts/HerrVonMuellerhoff-normal.woff2) format("woff2");font-weight:400;font-display:block}
 
 :root{
@@ -93,7 +94,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webki
 .e-letter{position:absolute;inset:3.5% 4% 3.5%;z-index:3;padding:1.4%;background:#fbf6ee;border-radius:2px;transition:transform 1s var(--ease2)}
 .e-letter img{object-position:50% 34%}
 .env.out .e-letter{transform:translateY(-68%)}
-.env__to{position:absolute;left:0;right:0;bottom:5%;z-index:5;text-align:center;font-size:clamp(2.5rem,12vw,4.2rem);pointer-events:none;transition:opacity .4s}
+.env__to{position:absolute;left:0;right:0;bottom:5%;z-index:5;text-align:center;font-family:"Allura",var(--script);font-size:clamp(2.6rem,12.5vw,4.3rem);pointer-events:none;transition:opacity .4s}
 .env.open .env__to{opacity:0}
 .seal::before{content:"";position:absolute;inset:-14%;border-radius:50%;border:1px solid rgba(255,214,170,.55);animation:ring 2.6s ease-out infinite}
 @keyframes ring{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.5);opacity:0}}
