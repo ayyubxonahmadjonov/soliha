@@ -63,7 +63,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webki
 .e-back{z-index:1;border-radius:5px;background:linear-gradient(#5d0812,#7c0d19)}
 .e-flapw{z-index:5;perspective:1400px;filter:drop-shadow(0 4px 5px rgba(50,0,6,.5));transition:z-index 0s .36s}
 .e-flap{position:absolute;inset:0;transform-origin:50% 0;clip-path:polygon(0 0,100% 0,50% var(--tip));background:var(--noise),linear-gradient(170deg,#d1242b,#a8121b 75%);transition:transform .8s cubic-bezier(.55,.05,.3,1),background 0s .36s}
-.e-front{z-index:4;clip-path:polygon(0 0,50% calc(var(--tip) + 2%),100% 0,100% 100%,0 100%);background:var(--noise),radial-gradient(120% 90% at 50% 100%,#c01a22,#9f111a);border-radius:5px}
+.e-front{z-index:4;clip-path:polygon(0 0,50% calc(var(--tip) - 1.5%),100% 0,100% 100%,0 100%);background:var(--noise),radial-gradient(120% 90% at 50% 100%,#c01a22,#9f111a);border-radius:5px}
 .e-front::after{content:"";position:absolute;inset:0;clip-path:polygon(0 100%,50% calc(var(--tip) + 4%),100% 100%);background:linear-gradient(0deg,rgba(255,255,255,.03),rgba(255,235,220,.09))}
 .open>.e-flapw{z-index:2}
 .open>.e-flapw .e-flap{transform:rotateX(180deg);background:var(--noise),repeating-linear-gradient(45deg,#f3dfc6 0 7px,#ecd3b4 7px 14px)}
