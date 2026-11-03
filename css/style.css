@@ -99,15 +99,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webki
 .iris[hidden]{display:none}
 .iris img{object-position:var(--hero-pos,50% 30%)}
 
-/* ============ PLAYER + CHAIN ============ */
-.player{position:fixed;left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:.7em;padding:5px 14px 5px 5px;border-radius:99px;background:rgba(20,5,8,.62);color:var(--cream);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:inset 0 0 0 1px rgba(246,234,219,.18);opacity:0;pointer-events:none;transition:opacity .8s,padding .5s var(--ease)}
-.unlocked .player{opacity:1;pointer-events:auto}
-.player__disc{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle,#b3141f 0 22%,#100304 23% 26%,#2a0a0e 27% 34%,#100304 35% 46%,#2a0a0e 47% 58%,#100304 59%);color:var(--cream);animation:spin 5s linear infinite;animation-play-state:paused}
-.player__disc .st{margin:0;width:9px;height:9px}
-.player[aria-pressed="true"] .player__disc{animation-play-state:running}
-.player[aria-pressed="false"] .player__label{opacity:.6;text-decoration:line-through}
-.player__label{font-size:.62rem;transition:opacity .3s}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* ============ CHAIN ============ */
 
 .chain{position:fixed;right:max(10px,env(safe-area-inset-right));top:50%;z-index:60;display:flex;flex-direction:column;gap:clamp(14px,3vh,26px);transform:translateY(-50%);color:var(--cream);opacity:0;pointer-events:none;transition:opacity .8s,color .6s}
 .unlocked .chain{opacity:.9;pointer-events:auto}
@@ -437,8 +429,6 @@ figcaption{margin-top:.8em;font-family:var(--serif);font-style:italic;font-size:
   .sleep__text{grid-column:2;margin-top:clamp(20px,5vh,60px)}
 }
 @media (max-width:899px){
-  .player{padding:5px}
-  .player__label{display:none}
   .sky__a figcaption{max-width:78%}
   .chain{right:3px;gap:11px}
   .chain a{width:14px;height:14px}

@@ -13,16 +13,14 @@ scrollTo(0, 0);
 const BIRTH_MONTH = 9, BIRTH_DAY = 24;
 
 /* ---------- music ---------- */
-const song = $('#song'), player = $('#player');
-let resumeOnShow = false, volRaf = 0;
+const song = $('#song');
+let volRaf = 0;
 const startSong = () => { const p = song.play(); if (p) p.catch(() => {}); };
-song.addEventListener('play', () => player.setAttribute('aria-pressed', 'true'));
-song.addEventListener('pause', () => player.setAttribute('aria-pressed', 'false'));
-player.addEventListener('click', () => { song.paused ? startSong() : song.pause(); });
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { resumeOnShow = !song.paused; song.pause(); }
-  else if (resumeOnShow) startSong();
-});
+/* There is no off switch, so anything that stops the song (a call, a blocked
+   start) must not leave it silent: the next touch brings it back. */
+const keepPlaying = () => { if (opened && !document.hidden && song.paused) startSong(); };
+['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, keepPlaying, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => { if (document.hidden) song.pause(); else keepPlaying(); });
 function rampVolume(to) { // iOS ignores volume; there it simply stays as it is
   cancelAnimationFrame(volRaf);
   const step = () => {
