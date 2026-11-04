@@ -13,14 +13,31 @@ scrollTo(0, 0);
 const BIRTH_MONTH = 9, BIRTH_DAY = 24;
 
 /* ---------- music ---------- */
-const song = $('#song');
-let volRaf = 0;
+const song = $('#song'), songSrc = song.getAttribute('src');
+let volRaf = 0, songAt = 0, songReloads = 0, songFails = 0, watchAt = -1, watchStuck = 0;
 const startSong = () => { const p = song.play(); if (p) p.catch(() => {}); };
 /* There is no off switch, so anything that stops the song (a call, a blocked
    start) must not leave it silent: the next touch brings it back. */
 const keepPlaying = () => { if (opened && !document.hidden && song.paused) startSong(); };
 ['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, keepPlaying, { capture: true, passive: true }));
 document.addEventListener('visibilitychange', () => { if (document.hidden) song.pause(); else keepPlaying(); });
+/* A tap may never come, since scrolling doesn't count as one, so the page also looks after
+   the song by itself: restart it if it stopped, and fetch it again if the file failed or
+   playback froze (a lost connection, the file replaced on the server), resuming in place. */
+song.addEventListener('timeupdate', () => { if (song.currentTime > 0) { songAt = song.currentTime; songFails = 0; } });
+function reloadSong() {
+  const at = songAt;
+  song.addEventListener('loadedmetadata', () => { try { song.currentTime = Math.min(at, song.duration - 1); } catch (e) {} }, { once: true });
+  song.src = `${songSrc}&r=${++songReloads}`;
+  startSong();
+}
+song.addEventListener('error', () => { if (opened) setTimeout(reloadSong, Math.min(10000, 1000 * ++songFails)); });
+setInterval(() => {
+  if (!opened || document.hidden || song.error) return;
+  if (song.paused) { startSong(); return; }
+  if (song.currentTime !== watchAt) { watchAt = song.currentTime; watchStuck = 0; return; }
+  if (++watchStuck >= 4) { watchStuck = 0; reloadSong(); }
+}, 2000);
 function rampVolume(to) { // iOS ignores volume; there it simply stays as it is
   cancelAnimationFrame(volRaf);
   const step = () => {
@@ -315,7 +332,7 @@ const secIO = new IntersectionObserver(es => es.forEach(e => {
 }), { rootMargin: '-50% 0px -50% 0px' });
 $$('section[data-theme]').forEach(s => secIO.observe(s));
 // the music gets quieter while she sleeps
-new IntersectionObserver(([e]) => { if (!song.paused) rampVolume(e.isIntersecting ? .5 : 1); }, { threshold: .2 }).observe($('.sleep__in'));
+new IntersectionObserver(([e]) => { rampVolume(e.isIntersecting ? .5 : 1); }, { threshold: .2 }).observe($('.sleep__in'));
 
 /* ---------- the late counter ---------- */
 (function late() {
