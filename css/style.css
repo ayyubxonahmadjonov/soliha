@@ -58,6 +58,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webki
 .rv-img{overflow:hidden;height:100%}
 .js .rv-img img{clip-path:inset(100% 0 0 0);transform:scale(1.16);transition:clip-path 1.4s var(--ease2),transform 1.8s var(--ease2)}
 .js .rv-img.in img{clip-path:inset(0 0 0 0);transform:none}
+.js .rv-img.shown img{clip-path:none;transform:none;transition:none}
+.wait{background:linear-gradient(100deg,rgba(246,234,219,.1) 30%,rgba(246,234,219,.36) 50%,rgba(246,234,219,.1) 70%) 0 0/260% 100%,rgba(130,78,66,.34);color:transparent;animation:photoWait 1.5s linear infinite}
+.rv-img.wait{position:relative}
+.rv-img.wait::after{content:"Rasm yuklanmoqda…";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:#fff3e4;text-shadow:0 1px 6px rgba(30,0,6,.75)}
+@keyframes photoWait{to{background-position:-260% 0}}
 
 /* ============ ENVELOPE PARTS ============ */
 .e-back,.e-front,.e-flapw{position:absolute;inset:0}

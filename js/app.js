@@ -100,7 +100,8 @@ function coverOf(el, w, h) {
 }
 async function reveal() {
   const img = $('img', iris), small = $('#gletter img');
-  try { await Promise.race([img.decode(), wait(900)]); } catch (e) {}
+  // On a slow connection the letter simply stays in the middle until the photo is ready.
+  try { await Promise.race([img.decode(), wait(8000)]); } catch (e) {}
 
   // Start the full-screen photo exactly on top of the letter's photo, same crop and
   // same size, so what follows reads as that one photo growing rather than a new one.
@@ -187,8 +188,60 @@ new IntersectionObserver(([e]) => {
 }, { threshold: .9 }).observe($('.mag-nav'));
 
 /* ---------- reveal on scroll ---------- */
+/* Every photo must arrive, whatever the network does: fetch them all up front in page
+   order, show a soft shimmer rather than an empty box, retry for as long as it takes, and
+   never play a photo's reveal before the photo is actually there. */
+const imgDone = img => img.complete && img.naturalWidth > 0;
+const waitBox = img => img.closest('.rv-img') || img;
+$$('img').forEach(i => { if (i.id !== 'tImg' && !imgDone(i)) waitBox(i).classList.add('wait'); });
+document.addEventListener('load', e => {
+  if (e.target.tagName === 'IMG') waitBox(e.target).classList.remove('wait');
+}, true);
+const imgTries = new WeakMap();
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (img.tagName !== 'IMG' || img.id === 'tImg') return;
+  const n = (imgTries.get(img) || 0) + 1, src = img.getAttribute('src'), set = img.getAttribute('srcset');
+  if (!src) return;
+  imgTries.set(img, n);
+  waitBox(img).classList.add('wait');
+  img.removeAttribute('srcset'); img.removeAttribute('src');     // no broken-image icon meanwhile
+  setTimeout(() => {
+    if (img.hasAttribute('src')) return;                         // something newer was put there
+    const fresh = u => u.replace(/([^\s,?]+\.webp)(\?r=\d+)?/g, `$1?r=${n}`);
+    if (set) img.setAttribute('srcset', fresh(set));
+    img.setAttribute('src', fresh(src));
+  }, Math.min(15000, 1000 * 2 ** (n - 1)));
+}, true);
+const photoQueue = $$('img[loading="lazy"]');
+let photosActive = 0;
+(function nextPhotos() {
+  while (photosActive < 3 && photoQueue.length) {
+    const img = photoQueue.shift();
+    if (imgDone(img)) continue;
+    photosActive++;
+    let over = false;
+    const next = () => { if (over) return; over = true; photosActive--; nextPhotos(); };
+    img.addEventListener('load', next, { once: true });
+    img.addEventListener('error', next, { once: true });
+    setTimeout(next, 8000);                                      // a stuck one must not hold up the rest
+    img.loading = 'eager';
+  }
+})();
+const photoReady = img => (imgDone(img) ? Promise.resolve() : new Promise(r => img.addEventListener('load', r, { once: true })))
+  .then(() => (img.decode ? img.decode().catch(() => {}) : 0));
 const io = new IntersectionObserver(es => es.forEach(e => {
-  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  if (!e.isIntersecting) return;
+  const t = e.target;
+  io.unobserve(t);
+  if (!t.classList.contains('rv-img')) { t.classList.add('in'); return; }
+  const img = $('img', t);
+  img.loading = 'eager';
+  photoReady(img).then(() => {
+    t.classList.add('in');
+    // Once revealed, drop the clip and its layer: some phones stop repainting them.
+    setTimeout(() => t.classList.add('shown'), 2000);
+  });
 }), { rootMargin: '0px 0px -10% 0px', threshold: .06 });
 $$('.rv,.rv-img,.necklace').forEach(el => io.observe(el));
 
