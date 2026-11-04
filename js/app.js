@@ -14,11 +14,12 @@ const BIRTH_MONTH = 9, BIRTH_DAY = 24;
 
 /* ---------- music ---------- */
 const song = $('#song'), songSrc = song.getAttribute('src');
+let songHeld = false;   // the candle moment: the microphone needs the room quiet
 let volRaf = 0, songAt = 0, songReloads = 0, songFails = 0, watchAt = -1, watchStuck = 0;
 const startSong = () => { const p = song.play(); if (p) p.catch(() => {}); };
 /* There is no off switch, so anything that stops the song (a call, a blocked
    start) must not leave it silent: the next touch brings it back. */
-const keepPlaying = () => { if (opened && !document.hidden && song.paused) startSong(); };
+const keepPlaying = () => { if (opened && !songHeld && !document.hidden && song.paused) startSong(); };
 ['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, keepPlaying, { capture: true, passive: true }));
 document.addEventListener('visibilitychange', () => { if (document.hidden) song.pause(); else keepPlaying(); });
 /* A tap may never come, since scrolling doesn't count as one, so the page also looks after
@@ -33,7 +34,7 @@ function reloadSong() {
 }
 song.addEventListener('error', () => { if (opened) setTimeout(reloadSong, Math.min(10000, 1000 * ++songFails)); });
 setInterval(() => {
-  if (!opened || document.hidden || song.error) return;
+  if (!opened || songHeld || document.hidden || song.error) return;
   if (song.paused) { startSong(); return; }
   if (song.currentTime !== watchAt) { watchAt = song.currentTime; watchStuck = 0; return; }
   if (++watchStuck >= 4) { watchStuck = 0; reloadSong(); }
@@ -260,7 +261,7 @@ const io = new IntersectionObserver(es => es.forEach(e => {
     setTimeout(() => t.classList.add('shown'), 2000);
   });
 }), { rootMargin: '0px 0px -10% 0px', threshold: .06 });
-$$('.rv,.rv-img,.necklace').forEach(el => io.observe(el));
+$$('.rv,.rv-img').forEach(el => io.observe(el));
 
 /* ---------- the note after the hero simply writes itself, once ---------- */
 const wordsEl = $('[data-words]'), wordsSmall = $('.words__small');
@@ -371,36 +372,196 @@ for (let i = 0; i < 18; i++) {
   c.className = 'candle';
   c.style.setProperty('--y', Math.round(x * x * 22));
   c.style.setProperty('--r', Math.random().toFixed(2));
+  c.style.setProperty('--x', x.toFixed(2));
   c.innerHTML = '<b class="flame"></b>';
   candles.appendChild(c);
 }
 const blow = $('#blow'), wish = $('#wish');
 let lit = true;
 async function relight(gap = 0) {
-  lit = true; candles.classList.remove('out'); wish.classList.remove('done');
+  lit = true; candles.classList.remove('out'); wish.classList.remove('done', 'wow');
+  tapOut.hidden = false; blowTip.hidden = false;
   blow.textContent = 'Shamlarni puflash'; blow.classList.remove('btn--ghost');
   // From the middle outwards.
   const list = $$('.candle', candles).map((c, i) => [Math.abs(i - 8.5), c]).sort((a, b) => a[0] - b[0]);
   for (const [, c] of list) { c.classList.remove('out'); if (gap) await wait(gap); }
 }
-blow.addEventListener('click', async () => {
-  const list = $$('.candle', candles);
-  if (lit) {
-    lit = false; blow.disabled = true;
-    if (navigator.vibrate) navigator.vibrate(20);
-    wish.classList.remove('sent');
-    candles.classList.add('out');
-    for (let i = 0; i < list.length; i++) { list[i].classList.add('out'); await wait(reduce ? 0 : 48); }
-    await wait(reduce ? 0 : 320);
-    petals(170);
-    wish.classList.add('done');
-    blow.textContent = 'Yana yoqish'; blow.disabled = false; blow.classList.add('btn--ghost');
-    await wait(reduce ? 0 : 1500);
-    if (!lit) tilak.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
-  } else {
-    relight();
+/* The reward for really blowing: a burst of gold from the candles, a warm flash and a ring. */
+function blowBurst() {
+  const cv = document.createElement('canvas');
+  cv.className = 'burst'; cv.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(cv);
+  const g = cv.getContext('2d'), dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = innerWidth, H = innerHeight, r = candles.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height * .2;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const TONES = ['#fff6d6', '#ffe9b4', '#f7cf7f', '#e9a94f', '#ff9d5c'];
+  const sparks = Array.from({ length: 240 }, (_, i) => {
+    const a = Math.random() * 6.283, v = 90 + Math.pow(Math.random(), .6) * 620;
+    return {
+      x: cx + (Math.random() - .5) * r.width * .8, y: cy + (Math.random() - .5) * 30,
+      vx: Math.cos(a) * v, vy: Math.sin(a) * v - 130,
+      r: .8 + Math.random() * 2.6, life: 1.1 + Math.random() * 1.5, c: TONES[i % TONES.length], star: i % 6 === 0
+    };
+  });
+  const t0 = performance.now();
+  let last = t0;
+  (function frame(now) {
+    const t = (now - t0) / 1000, dt = Math.min(.05, (now - last) / 1000);
+    last = now;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    g.globalCompositeOperation = 'lighter';
+    const flash = clamp(1 - t / .55);
+    if (flash > 0) {
+      const f = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * .8);
+      f.addColorStop(0, `rgba(255,205,130,${.55 * flash})`);
+      f.addColorStop(1, 'rgba(255,150,70,0)');
+      g.fillStyle = f; g.fillRect(0, 0, W, H);
+    }
+    for (const [delay, reach, width] of [[0, .95, 3], [.14, .7, 1.5]]) {
+      const k = clamp((t - delay) / .95);
+      if (k > 0 && k < 1) {
+        g.strokeStyle = `rgba(255,226,170,${(1 - k) * .75})`;
+        g.lineWidth = width;
+        g.beginPath(); g.arc(cx, cy, (1 - Math.pow(1 - k, 3)) * Math.max(W, H) * reach, 0, 6.283); g.stroke();
+      }
+    }
+    let alive = false;
+    for (const p of sparks) {
+      const k = t / p.life;
+      if (k >= 1) continue;
+      alive = true;
+      p.vx *= 1 - 1.5 * dt; p.vy = p.vy * (1 - 1.5 * dt) + 210 * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      g.globalAlpha = (1 - k) * (.55 + .45 * Math.sin(t * 18 + p.r * 9));
+      g.fillStyle = p.c;
+      g.beginPath();
+      if (p.star) {
+        const q = p.r * 3.2, w = q * .17;
+        g.moveTo(p.x, p.y - q); g.lineTo(p.x + w, p.y - w); g.lineTo(p.x + q, p.y); g.lineTo(p.x + w, p.y + w);
+        g.lineTo(p.x, p.y + q); g.lineTo(p.x - w, p.y + w); g.lineTo(p.x - q, p.y); g.lineTo(p.x - w, p.y - w);
+        g.closePath();
+      } else g.arc(p.x, p.y, p.r, 0, 6.283);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+    if (alive || t < 1.2) requestAnimationFrame(frame); else cv.remove();
+  })(t0);
+}
+async function candlesOut(blown = false) {
+  lit = false; blow.disabled = true;
+  tapOut.hidden = true; blowTip.hidden = true;
+  if (navigator.vibrate) navigator.vibrate(blown ? [30, 40, 60] : 20);
+  wish.classList.remove('sent');
+  candles.classList.add('out');
+  if (blown && !reduce) {
+    blowBurst();
+    wish.classList.add('wow');
+    candles.animate([{ transform: 'none' }, { transform: 'translateY(-7px) scale(1.04)', offset: .3 }, { transform: 'none' }], { duration: 620, easing: 'cubic-bezier(.2,.8,.2,1)' });
   }
+  for (const c of $$('.candle:not(.out)', candles)) { c.classList.add('out'); await wait(reduce ? 0 : 48); }
+  await wait(reduce ? 0 : 320);
+  songHeld = false; startSong();     // the music comes back with the petals
+  petals(blown ? 280 : 170);
+  wish.classList.add('done');
+  blow.textContent = 'Yana yoqish'; blow.disabled = false; blow.classList.add('btn--ghost');
+  await wait(reduce ? 0 : blown ? 2800 : 1500);
+  if (!lit) tilak.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+}
+
+/* Really blowing them out. The music waits while the microphone listens, and the candles
+   go one by one as she blows, so it feels physical and a short breath is enough. Only the
+   loudness is read; nothing is recorded or sent. It gets easier every few seconds, and
+   there is always a way past it: this must never stand between her and the rest. */
+const breath = $('#breath'), breathSay = $('#breathSay'), breathSkip = $('#breathSkip');
+const tapOut = $('#tapOut'), blowTip = $('#blowTip');
+let listening = false;
+function listenForBreath() {
+  const md = navigator.mediaDevices, AC = window.AudioContext || window.webkitAudioContext;
+  if (!md || !md.getUserMedia || !AC) return Promise.resolve('nomic');
+  return new Promise(resolve => {
+    listening = true;
+    songHeld = true; song.pause();
+    blow.disabled = true; blow.classList.add('listening'); blow.textContent = 'Kutilmoqda…';
+    tapOut.hidden = true; blowTip.hidden = true;
+    breathSay.textContent = 'Puflaganingizni sezish uchun mikrofonga ruxsat bering. Hech narsa yozib olinmaydi.';
+    breath.hidden = false; breathSkip.hidden = true;
+
+    const ac = new AC();             // created and resumed inside the tap, or phones keep it asleep
+    if (ac.resume) ac.resume().catch(() => {});
+    let over = false, stream = null, raf = 0;
+    const timers = [setTimeout(() => { breathSkip.hidden = false; }, 4500), setTimeout(() => finish('left'), 45000)];
+    const seen = new IntersectionObserver(([e]) => { if (!e.isIntersecting) finish('left'); }, { rootMargin: '140px 0px' });
+    const hide = () => { if (document.hidden) finish('left'); };
+    const skip = () => finish('skip');
+    function finish(how) {
+      if (over) return;
+      over = true;
+      timers.forEach(clearTimeout);
+      cancelAnimationFrame(raf);
+      seen.disconnect();
+      document.removeEventListener('visibilitychange', hide);
+      breathSkip.removeEventListener('click', skip);
+      // Let go of the microphone at once: phones keep audio degraded while it is open.
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      ac.close().catch(() => {});
+      candles.style.removeProperty('--lean');
+      breath.hidden = true;
+      blow.classList.remove('listening'); blow.disabled = false;
+      listening = false;
+      if (how === 'left') { relight(); songHeld = false; startSong(); }
+      resolve(how);
+    }
+    seen.observe(candles);
+    document.addEventListener('visibilitychange', hide);
+    breathSkip.addEventListener('click', skip);
+
+    md.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }).then(got => {
+      if (over) { got.getTracks().forEach(t => t.stop()); return; }
+      stream = got;
+      blow.textContent = 'Puflang…';
+      breathSay.innerHTML = '<span class="sv-phone">Telefonga</span><span class="sv-desk">Mikrofonga</span> yaqinlashib, shamlarni rostan puflang';
+      const an = ac.createAnalyser();
+      an.fftSize = 1024; an.smoothingTimeConstant = 0;
+      ac.createMediaStreamSource(stream).connect(an);
+      const silent = ac.createGain();
+      silent.gain.value = 0;
+      an.connect(silent); silent.connect(ac.destination);   // Safari only runs nodes that reach an output
+      const data = new Uint8Array(an.fftSize);
+      const list = $$('.candle', candles).map((c, i) => [Math.abs(i - 8.5), c]).sort((p, q) => p[0] - q[0]).map(p => p[1]);
+      const t0 = performance.now();
+      let last = t0, quiet = 0, heard = 0, out = 0, warm = 0;
+      (function tick(now) {
+        const dt = Math.min(50, now - last); last = now;
+        an.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / data.length), age = now - t0;
+        if (age < 300) { warm++; quiet += (Math.min(rms, .02) - quiet) / warm; raf = requestAnimationFrame(tick); return; }
+        const need = Math.max(Math.max(.015, .05 * Math.pow(.8, Math.floor(age / 2500))), quiet * 2.5);
+        if (rms < need * .6) quiet += (rms - quiet) * .02;
+        const strength = clamp(rms / need / 3);
+        candles.style.setProperty('--lean', rms >= need ? (10 + strength * 22).toFixed(1) : '0');
+        if (rms >= need) {
+          heard += dt;
+          const should = Math.floor((heard - 70) / 36);      // about 0.7 s of breath for all 18
+          while (out < should && out < list.length) list[out++].classList.add('out');
+          if (out === 1) breathSay.textContent = 'Yana bir oz puflang!';
+          if (out >= list.length) { finish('blown'); return; }
+        }
+        raf = requestAnimationFrame(tick);
+      })(t0);
+    }).catch(() => finish('denied'));
+  });
+}
+blow.addEventListener('click', async () => {
+  if (listening) return;
+  if (!lit) { relight(); return; }
+  const how = reduce ? 'tap' : await listenForBreath();
+  if (how !== 'left') candlesOut(how === 'blown');
 });
+tapOut.addEventListener('click', () => { if (!listening && lit) candlesOut(); });
 
 /* ---------- the wish letter ---------- */
 const WISH_URL = 'https://soliha-tilak.vercel.app/api/tilak';   // relay/api/tilak.js holds the bot's token, not this page
@@ -674,6 +835,128 @@ tForm.addEventListener('submit', async e => {
   resetLetter();
   sending = false; blow.disabled = false;
 });
+
+/* ---------- the kart: three red lights, green, and off it goes ---------- */
+(function () {
+  const sec = $('.kart');
+  if (reduce) { sec.classList.add('off'); return; }
+  const lights = $$('.lights i', sec), speed = $('.kart__speed', sec), checks = $$('.checker', sec);
+  new IntersectionObserver(async ([e], o) => {
+    if (!e.isIntersecting) return;
+    o.disconnect();
+    const img = $('img', sec);
+    img.loading = 'eager';
+    await Promise.race([photoReady(img), wait(6000)]);   // never drive an empty frame in
+    for (const l of lights) { l.classList.add('red'); await wait(400); }
+    await wait(240);
+    lights.forEach(l => { l.classList.remove('red'); l.classList.add('green'); });
+    if (navigator.vibrate) navigator.vibrate([12, 30, 12]);
+    // The final look is the plain CSS; these only animate from where it comes from.
+    sec.classList.add('off');
+    $('.kart__photo', sec).animate([
+      { transform: 'translateX(-125vw) skewX(16deg)', filter: 'blur(5px)' },
+      { transform: 'translateX(5vw) skewX(-5deg)', filter: 'blur(0)', offset: .68 },
+      { transform: 'translateX(-1vw) skewX(1deg)', filter: 'blur(0)', offset: .86 },
+      { transform: 'none', filter: 'blur(0)' }
+    ], { duration: 1050, easing: 'cubic-bezier(.16,.72,.3,1)' });
+    $('.kart__title', sec).animate([
+      { transform: 'translateX(-60vw) skewX(18deg)', opacity: 0 },
+      { transform: 'translateX(2vw) skewX(-4deg)', opacity: 1, offset: .75 },
+      { transform: 'none', opacity: 1 }
+    ], { duration: 750, delay: 260, easing: 'cubic-bezier(.16,.72,.3,1)', fill: 'backwards' });
+    $('.kart__num', sec).animate([{ scale: 1.5, opacity: 0 }, { scale: 1, opacity: 1 }],
+      { duration: 800, delay: 430, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+    checks.forEach((c, i) => c.animate(
+      [{ backgroundPositionX: '0px' }, { backgroundPositionX: `${i ? 620 : -620}px` }],
+      { duration: 1300, easing: 'cubic-bezier(.1,.75,.25,1)' }));
+    for (let i = 0; i < 9; i++) {
+      const s = document.createElement('i');
+      s.style.top = `${6 + Math.random() * 88}%`;
+      speed.appendChild(s);
+      s.animate([
+        { transform: 'translateX(-70vw)', opacity: 0 },
+        { opacity: .9, offset: .25 },
+        { transform: 'translateX(135vw)', opacity: 0 }
+      ], { duration: 380 + Math.random() * 340, delay: Math.random() * 300, easing: 'linear' }).finished.then(() => s.remove());
+    }
+    await wait(1400);
+    lights.forEach(l => l.classList.remove('green'));
+  }, { threshold: .3 }).observe(sec);
+})();
+
+/* ---------- the ending: her photos rise and become the stars of an "18" ---------- */
+(function () {
+  const sky = $('#sky18'), finale = $('#end');
+  const STARS = [[9, 26], [23, 7], [23, 32], [23, 60], [23, 92], [67, 49], [50, 37], [52, 16], [67, 7], [82, 16], [84, 37], [87, 60], [87, 81], [67, 93], [47, 81], [47, 60]];
+  const PHOTOS = ['flowers', 'eighteen', 'balloons', 'cafe', 'headphones', 'eclair', 'bite', 'closeup', 'cover', 'suit', 'selfie', 'portrait', 'ridge', 'shades', 'kart', 'hero'];
+  sky.innerHTML = `<svg class="sky18__lines" viewBox="0 0 100 100" preserveAspectRatio="none"><path pathLength="1" d="M9 26L23 7 23 32 23 60 23 92"/><path pathLength="1" d="M67 49 50 37 52 16 67 7 82 16 84 37 67 49 87 60 87 81 67 93 47 81 47 60 67 49"/></svg>` +
+    STARS.map(([x, y], i) => `<i class="fstar" style="left:${x}%;top:${y}%;--d:${(i * .37 % 3).toFixed(2)}s"><svg width="26" height="26" viewBox="0 0 24 24"><use href="#star"/></svg></i>`).join('');
+  const stars = $$('.fstar', sky);
+  const finish = () => { stars.forEach(s => s.classList.add('on')); sky.classList.add('drawn'); finale.classList.add('told'); };
+  if (reduce) {
+    finish();
+    $$('.hw', finale).forEach(h => { h.style.clipPath = 'none'; });
+    return;
+  }
+  // Small copies, ready before she gets here; a photo that can't load just leaves its star.
+  let pics = null;
+  const loadPics = () => pics || (pics = Promise.all(PHOTOS.map(n => new Promise(ok => {
+    const im = new Image();
+    im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => ok(im));
+    im.onerror = () => ok(null);
+    im.alt = '';
+    im.src = `assets/img/thumb/${n}.webp`;
+  }))));
+  new IntersectionObserver(([e], o) => { if (e.isIntersecting) { o.disconnect(); loadPics(); } }, { rootMargin: '1800px 0px' }).observe(finale);
+  new IntersectionObserver(([e]) => { rampVolume(e.isIntersecting ? .6 : 1); }, { threshold: .15 }).observe(finale);
+
+  new IntersectionObserver(async ([e], o) => {
+    if (!e.isIntersecting) return;
+    o.disconnect();
+    const safety = setTimeout(finish, 11000);                // the words must always appear
+    const imgs = await Promise.race([loadPics(), wait(2500).then(() => PHOTOS.map(() => null))]);
+    const box = sky.getBoundingClientRect();
+    const flying = [];
+    imgs.forEach((im, i) => {
+      if (!im) return;
+      const fp = document.createElement('div');
+      fp.className = 'fp';
+      fp.appendChild(im);
+      sky.appendChild(fp);
+      const dx = (Math.random() - .5) * box.width * .16, dy = (Math.random() - .5) * box.height * .12;
+      const rot = (Math.random() - .5) * 26;
+      const at = `translate(-50%,-50%) translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+      fp.style.transform = at;
+      fp.animate([
+        { transform: `translate(-50%,-50%) translate(${dx * 2.4}px,-${innerHeight * 1.1}px) rotate(${rot * 3}deg) scale(1.2)` },
+        { transform: `${at} scale(.97)`, offset: .82 },
+        { transform: `${at} scale(1)` }
+      ], { duration: 620, delay: i * 150, easing: 'cubic-bezier(.3,.7,.25,1)', fill: 'backwards' });
+      flying.push({ fp, i, at });
+    });
+    await wait(flying.length ? flying.length * 150 + 620 + 480 : 0);
+    const rise = stars.map((star, i) => {
+      const f = flying.find(x => x.i === i), gap = i * 95;
+      const light = () => {
+        star.classList.add('on');
+        star.animate([{ scale: 0, opacity: 0 }, { scale: 1.9, opacity: 1, offset: .5 }, { scale: 1, opacity: 1 }], { duration: 520, easing: 'ease-out' });
+      };
+      if (!f) return wait(gap + 700).then(light);
+      const tx = (STARS[i][0] / 100 - .5) * box.width, ty = (STARS[i][1] / 100 - .5) * box.height;
+      const a = f.fp.animate([
+        { transform: `${f.at} scale(1)`, opacity: 1 },
+        { opacity: 1, offset: .62 },
+        { transform: `translate(-50%,-50%) translate(${tx}px,${ty}px) rotate(0deg) scale(.1)`, opacity: 0 }
+      ], { duration: 880, delay: gap, easing: 'cubic-bezier(.55,.05,.35,1)', fill: 'forwards' });
+      return a.finished.catch(() => {}).then(() => { light(); f.fp.remove(); });
+    });
+    await Promise.all(rise);
+    sky.classList.add('drawn');
+    await wait(1500);
+    clearTimeout(safety);
+    finish();
+  }, { threshold: .5 }).observe(sky);
+})();
 
 /* ---------- passing the letter by: a kitten in tears asks her to come back ---------- */
 const PLEA_CAT = `<svg class="plea__cat" width="106" height="97" viewBox="0 0 120 110" aria-hidden="true">

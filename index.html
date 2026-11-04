@@ -18,7 +18,7 @@
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/HerrVonMuellerhoff-normal.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/Allura-normal.woff2" crossorigin>
 <link rel="preload" as="image" href="assets/img/hero-800.webp" imagesrcset="assets/img/hero-800.webp 800w, assets/img/hero-1500.webp 1285w" imagesizes="100vw">
-<link rel="stylesheet" href="css/style.css?v=18">
+<link rel="stylesheet" href="css/style.css?v=20">
 <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
@@ -172,7 +172,17 @@
     <p class="wish__title script foil rv">Bitta tilak</p>
     <p class="wish__sub rv">Ko‘zingizni yuming, tilak qiling, keyin shamlarni o‘chiring.</p>
     <div class="candles" id="candles" aria-hidden="true"></div>
-    <button class="btn" id="blow" type="button">Shamlarni puflash</button>
+    <div class="blow-row">
+      <button class="btn" id="blow" type="button">Shamlarni puflash</button>
+      <button class="btn btn--ghost" id="tapOut" type="button">Bosib o‘chirish</button>
+    </div>
+    <p class="blow-tip" id="blowTip">Rostan puflasangiz, ajoyibroq bo‘ladi 🌬️</p>
+    <p class="wish__wow" id="wishWow" role="status">Mana bu — haqiqiy puflash!</p>
+    <div class="breath" id="breath" hidden>
+      <p class="breath__say" id="breathSay" aria-live="polite"></p>
+      <p class="mono breath__note">Musiqa puflaguningizcha kutib turadi</p>
+      <button class="breath__skip" id="breathSkip" type="button" hidden>Puflay olmayapman</button>
+    </div>
     <!-- the wish letter: folds into a plane when sent -->
     <div class="tilak" id="tilak">
       <div class="tilak__in">
@@ -254,12 +264,14 @@
 <!-- karting -->
 <section class="kart" data-theme="dark">
   <div class="checker" aria-hidden="true"></div>
+  <div class="kart__speed" aria-hidden="true"></div>
   <div class="wrap kart__in">
     <div class="kart__num" aria-hidden="true">5</div>
-    <figure class="kart__photo"><div class="rv-img"><img alt="Soliha karting mashinasida, 5-raqam, dubulg‘asi yonida" src="assets/img/kart-800.webp" srcset="assets/img/kart-800.webp 800w, assets/img/kart-1500.webp 960w" sizes="(min-width:900px) 40vw, 92vw" loading="lazy" decoding="async"></div></figure>
+    <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+    <figure class="kart__photo"><div class="kart__frame"><img alt="Soliha karting mashinasida, 5-raqam, dubulg‘asi yonida" src="assets/img/kart-800.webp" srcset="assets/img/kart-800.webp 800w, assets/img/kart-1500.webp 960w" sizes="(min-width:900px) 40vw, 92vw" loading="lazy" decoding="async"></div></figure>
     <div class="kart__copy">
       <p class="mono rv">Poygadan oldin</p>
-      <h2 class="kart__title rv">Start.</h2>
+      <h2 class="kart__title">Start.</h2>
       <p class="rv">Dubulg‘a qo‘lda, rul oldida, shoshilish yo‘q. Chunki marra baribir sizniki.</p>
     </div>
   </div>
@@ -412,19 +424,11 @@
 <section class="finale" id="end" data-theme="dark">
   <canvas class="stars" data-stars="100" aria-hidden="true"></canvas>
   <div class="end">
-    <svg class="necklace" viewBox="0 0 240 330" aria-hidden="true">
-      <path class="necklace__chain" pathLength="1" d="M4 0C30 62 78 104 120 118 162 104 210 62 236 0"/>
-      <path class="necklace__chain" pathLength="1" d="M120 118v150"/>
-      <use href="#star" x="108" y="128" width="24" height="24"/>
-      <use href="#star" x="106" y="160" width="28" height="28"/>
-      <use href="#star" x="104" y="196" width="32" height="32"/>
-      <use href="#star" x="102" y="236" width="36" height="36"/>
-      <use href="#star" x="98" y="278" width="44" height="44"/>
-    </svg>
-    <p class="mono rv">Xat shu yerda tugaydi</p>
-    <p class="end__text rv">Bu sahifani xohlagan paytingiz qayta ochishingiz mumkin. Kerak bo‘lgan kunlarda eslatib tursin: kulgingiz xonani yoritadi, tanlagan yo‘lingiz esa faqat o‘zingizniki.</p>
-    <p class="end__big script foil rv">Yangi yoshingiz muborak bo‘lsin</p>
-    <button class="btn btn--ghost rv" id="replay" type="button">Xatni qaytadan ochish</button>
+    <div class="sky18" id="sky18" aria-hidden="true"></div>
+    <p class="mono end__seq">Xat shu yerda tugaydi</p>
+    <p class="end__text end__seq">Bu sahifani xohlagan paytingiz qayta ochishingiz mumkin. Kerak bo‘lgan kunlarda eslatib tursin: kulgingiz xonani yoritadi, tanlagan yo‘lingiz esa faqat o‘zingizniki.</p>
+    <p class="end__big script" aria-label="Yangi yoshingiz muborak bo‘lsin"><span class="hw foil">Yangi yoshingiz</span><span class="hw foil">muborak bo‘lsin</span></p>
+    <button class="btn btn--ghost end__seq" id="replay" type="button">Xatni qaytadan ochish</button>
     <p class="mono end__foot">Qo‘shiq: Krasivaya <svg class="st"><use href="#star"/></svg> Tiraji: 1 nusxa <svg class="st"><use href="#star"/></svg> Noyabr 2026</p>
   </div>
 </section>
@@ -461,6 +465,6 @@
 <canvas id="petals" aria-hidden="true"></canvas>
 <noscript><style>.gate,.iris{display:none}html.locked,html.locked body{overflow:auto;height:auto}</style></noscript>
 <script src="js/plane.js?v=13"></script>
-<script src="js/app.js?v=19"></script>
+<script src="js/app.js?v=20"></script>
 </body>
 </html>
