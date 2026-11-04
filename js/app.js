@@ -836,52 +836,77 @@ tForm.addEventListener('submit', async e => {
   sending = false; blow.disabled = false;
 });
 
-/* ---------- the kart: three red lights, green, and off it goes ---------- */
+/* ---------- the kart: three red lights and a count, green, and off it goes ---------- */
 (function () {
   const sec = $('.kart');
   if (reduce) { sec.classList.add('off'); return; }
-  const lights = $$('.lights i', sec), speed = $('.kart__speed', sec), checks = $$('.checker', sec);
-  new IntersectionObserver(async ([e], o) => {
-    if (!e.isIntersecting) return;
-    o.disconnect();
+  const lights = $$('.lights i', sec), speed = $('.kart__speed', sec), checks = $$('.checker', sec), count = $('#kartCount');
+  let started = false;
+  async function race() {
+    if (started) return;
+    started = true;
+    starter.disconnect(); passed.disconnect();
     const img = $('img', sec);
     img.loading = 'eager';
     await Promise.race([photoReady(img), wait(6000)]);   // never drive an empty frame in
-    for (const l of lights) { l.classList.add('red'); await wait(400); }
-    await wait(240);
+    for (let i = 0; i < lights.length; i++) {
+      lights[i].classList.add('red');
+      count.textContent = lights.length - i;
+      count.animate([{ scale: 1.7, opacity: 0 }, { scale: 1, opacity: 1, offset: .35 }, { scale: .92, opacity: .9 }], { duration: 400, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      if (navigator.vibrate) navigator.vibrate(10);
+      await wait(400);
+    }
+    count.textContent = '';
     lights.forEach(l => { l.classList.remove('red'); l.classList.add('green'); });
-    if (navigator.vibrate) navigator.vibrate([12, 30, 12]);
+    if (navigator.vibrate) navigator.vibrate([25, 30, 40]);
     // The final look is the plain CSS; these only animate from where it comes from.
     sec.classList.add('off');
+    sec.animate([{ backgroundColor: '#1d6b3c' }, { backgroundColor: '#141416' }], { duration: 650, easing: 'ease-out' });
+    $('.kart__in', sec).animate([
+      { transform: 'translate(0,0)' }, { transform: 'translate(-7px,4px)' }, { transform: 'translate(7px,-4px)' },
+      { transform: 'translate(-5px,-3px)' }, { transform: 'translate(4px,3px)' }, { transform: 'translate(-2px,1px)' }, { transform: 'translate(0,0)' }
+    ], { duration: 520, delay: 520 });
     $('.kart__photo', sec).animate([
-      { transform: 'translateX(-125vw) skewX(16deg)', filter: 'blur(5px)' },
-      { transform: 'translateX(5vw) skewX(-5deg)', filter: 'blur(0)', offset: .68 },
-      { transform: 'translateX(-1vw) skewX(1deg)', filter: 'blur(0)', offset: .86 },
+      { transform: 'translateX(-135vw) skewX(24deg) scale(1.12)', filter: 'blur(9px)' },
+      { transform: 'translateX(8vw) skewX(-8deg) scale(1.02)', filter: 'blur(0)', offset: .62 },
+      { transform: 'translateX(-2vw) skewX(2deg) scale(1)', filter: 'blur(0)', offset: .84 },
       { transform: 'none', filter: 'blur(0)' }
     ], { duration: 1050, easing: 'cubic-bezier(.16,.72,.3,1)' });
     $('.kart__title', sec).animate([
-      { transform: 'translateX(-60vw) skewX(18deg)', opacity: 0 },
-      { transform: 'translateX(2vw) skewX(-4deg)', opacity: 1, offset: .75 },
+      { transform: 'translateX(-70vw) skewX(22deg) scale(1.3)', opacity: 0 },
+      { transform: 'translateX(3vw) skewX(-5deg) scale(1)', opacity: 1, offset: .75 },
       { transform: 'none', opacity: 1 }
-    ], { duration: 750, delay: 260, easing: 'cubic-bezier(.16,.72,.3,1)', fill: 'backwards' });
-    $('.kart__num', sec).animate([{ scale: 1.5, opacity: 0 }, { scale: 1, opacity: 1 }],
-      { duration: 800, delay: 430, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+    ], { duration: 750, delay: 300, easing: 'cubic-bezier(.16,.72,.3,1)', fill: 'backwards' });
+    $('.kart__num', sec).animate([{ scale: 1.8, opacity: 0 }, { scale: 1, opacity: 1 }],
+      { duration: 800, delay: 480, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
     checks.forEach((c, i) => c.animate(
-      [{ backgroundPositionX: '0px' }, { backgroundPositionX: `${i ? 620 : -620}px` }],
-      { duration: 1300, easing: 'cubic-bezier(.1,.75,.25,1)' }));
-    for (let i = 0; i < 9; i++) {
+      [{ backgroundPositionX: '0px' }, { backgroundPositionX: `${i ? 1100 : -1100}px` }],
+      { duration: 1500, easing: 'cubic-bezier(.1,.75,.25,1)' }));
+    for (let i = 0; i < 22; i++) {
       const s = document.createElement('i');
-      s.style.top = `${6 + Math.random() * 88}%`;
+      s.style.top = `${4 + Math.random() * 92}%`;
+      s.style.setProperty('--h', `${1 + Math.ceil(Math.random() * 3)}px`);
       speed.appendChild(s);
       s.animate([
-        { transform: 'translateX(-70vw)', opacity: 0 },
-        { opacity: .9, offset: .25 },
-        { transform: 'translateX(135vw)', opacity: 0 }
-      ], { duration: 380 + Math.random() * 340, delay: Math.random() * 300, easing: 'linear' }).finished.then(() => s.remove());
+        { transform: 'translateX(-80vw)', opacity: 0 },
+        { opacity: 1, offset: .2 },
+        { transform: 'translateX(140vw)', opacity: 0 }
+      ], { duration: 300 + Math.random() * 360, delay: Math.random() * 520, easing: 'linear', fill: 'backwards' }).finished.then(() => s.remove());
     }
-    await wait(1400);
+    await wait(1500);
     lights.forEach(l => l.classList.remove('green'));
-  }, { threshold: .3 }).observe(sec);
+  }
+  // Starts once the place where the kart will arrive is really on screen.
+  const starter = new IntersectionObserver(([e]) => { if (e.isIntersecting) race(); }, { rootMargin: '0px 0px -55% 0px' });
+  starter.observe($('.lights', sec));
+  // Flung past it: don't leave an empty stage to come back to.
+  const passed = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting || e.boundingClientRect.bottom > 0 || started) return;
+    started = true;
+    starter.disconnect(); passed.disconnect();
+    sec.classList.add('off');
+  });
+  passed.observe(sec);
 })();
 
 /* ---------- the ending: her photos rise and become the stars of an "18" ---------- */
@@ -910,9 +935,11 @@ tForm.addEventListener('submit', async e => {
   new IntersectionObserver(([e], o) => { if (e.isIntersecting) { o.disconnect(); loadPics(); } }, { rootMargin: '1800px 0px' }).observe(finale);
   new IntersectionObserver(([e]) => { rampVolume(e.isIntersecting ? .6 : 1); }, { threshold: .15 }).observe(finale);
 
-  new IntersectionObserver(async ([e], o) => {
-    if (!e.isIntersecting) return;
-    o.disconnect();
+  const teller = new IntersectionObserver(async es => {
+    if (!es.some(x => x.isIntersecting)) return;
+    teller.disconnect();
+    // Flung straight to the bottom: the words can't wait for a show nobody is watching.
+    if (sky.getBoundingClientRect().bottom < innerHeight * .3) { finish(); return; }
     const safety = setTimeout(finish, 11000);                // the words must always appear
     const imgs = await Promise.race([loadPics(), wait(2500).then(() => PHOTOS.map(() => null))]);
     const box = sky.getBoundingClientRect();
@@ -955,7 +982,9 @@ tForm.addEventListener('submit', async e => {
     await wait(1500);
     clearTimeout(safety);
     finish();
-  }, { threshold: .5 }).observe(sky);
+  }, { threshold: .5 });
+  teller.observe(sky);
+  teller.observe($('.end__foot', finale));
 })();
 
 /* ---------- passing the letter by: a kitten in tears asks her to come back ---------- */
