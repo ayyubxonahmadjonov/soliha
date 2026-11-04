@@ -494,7 +494,7 @@ tForm.addEventListener('submit', async e => {
 
   sending = true; blow.disabled = true; tErr.textContent = '';
   const arrived = deliver(text, tBlob).then(() => true, () => false);
-  const failed = 'Xat yo‘lda qoldi. Internetni tekshirib, yana bir bor jo‘nating. Yozganingiz o‘chmadi.';
+  const failed = 'Xat yo‘lda qoldi. Bir ozdan keyin yana jo‘natib ko‘ring. Yozganingiz o‘chmadi.';
 
   if (reduce) {
     if (await arrived) { startGold(); resetLetter(); relight(); wish.classList.add('sent'); }
