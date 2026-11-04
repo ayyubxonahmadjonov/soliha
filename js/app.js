@@ -35,31 +35,93 @@ function rampVolume(to) { // iOS ignores volume; there it simply stays as it is
 /* ---------- gate ---------- */
 const gate = $('#gate'), genv = $('#genv'), seal = $('#seal'), iris = $('#iris'), hero = $('#top');
 let opened = false;
+$('img', iris).decode().catch(() => {});   // ready before it is needed, so nothing pops in later
+
+function breakSeal() {
+  seal.classList.add('broken');
+  const half = (clip, x, rot) => {
+    const h = document.createElement('span');
+    h.className = 'seal__half';
+    h.innerHTML = `<svg viewBox="0 0 100 100" style="clip-path:${clip}"><use href="#seal-art"/></svg>`;
+    seal.appendChild(h);
+    h.animate([
+      { transform: 'none', opacity: 1, offset: 0 },
+      { transform: `translate(${x * .2}%,-5%) rotate(${rot * .22}deg)`, opacity: 1, offset: .18 },
+      { transform: `translate(${x}%,210%) rotate(${rot}deg)`, opacity: 0, offset: 1 }
+    ], { duration: 1000, easing: 'cubic-bezier(.45,.1,.75,.65)', fill: 'forwards' });
+  };
+  half('polygon(0 0,55% 0,46% 22%,57% 40%,44% 58%,54% 78%,47% 100%,0 100%)', -36, -38);
+  half('polygon(55% 0,100% 0,100% 100%,47% 100%,54% 78%,44% 58%,57% 40%,46% 22%)', 36, 32);
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement('i'), a = Math.random() * 6.283, d = 46 + Math.random() * 130;
+    s.className = 'spark';
+    genv.appendChild(s);
+    s.animate([
+      { transform: 'none', opacity: 1 },
+      { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d + 34}px) scale(.15)`, opacity: 0 }
+    ], { duration: 650 + Math.random() * 650, easing: 'cubic-bezier(.12,.72,.3,1)', fill: 'forwards' }).finished.then(() => s.remove());
+  }
+}
 async function openGate() {
   if (opened) return; opened = true;
   startSong();                      // must stay inside the tap for mobile browsers
   if (navigator.vibrate) navigator.vibrate(12);
   gate.classList.add('opening');
-  seal.classList.add('broken');
-  await wait(reduce ? 0 : 320);
+  if (reduce) return reveal();
+
+  seal.classList.add('pressed');
+  await wait(170);
+  if (navigator.vibrate) navigator.vibrate(18);
+  breakSeal();
+  await wait(260);
   genv.classList.add('open');
-  await wait(reduce ? 0 : 800);
+  await wait(1020);
+
+  // The letter comes up out of the pocket...
+  const letterEl = $('#gletter'), h = genv.offsetHeight, up = h * .6;
+  await letterEl.animate([{ transform: 'none' }, { transform: `translateY(${-up}px)` }],
+    { duration: 1050, easing: 'cubic-bezier(.32,.04,.2,1)', fill: 'forwards' }).finished;
+
+  // ...then the envelope falls away while the letter settles, straight, in the middle.
+  const box = genv.getBoundingClientRect(), sink = h * 1.05;
+  const middle = innerHeight / 2 - (box.top + box.height / 2);
+  const settle = { duration: 1000, easing: 'cubic-bezier(.5,0,.2,1)', fill: 'forwards' };
   genv.classList.add('out');
-  await wait(reduce ? 0 : 1020);
+  genv.animate([{ transform: 'rotate(-1.4deg)' }, { transform: `translateY(${sink}px)` }], settle);
+  letterEl.animate([{ transform: `translateY(${-up}px)` }, { transform: `translateY(${middle - sink}px) scale(1.14)` }], settle);
+  await wait(1030);
   await reveal();
 }
+/* Where a cover-fitted image really sits inside a w x h box. */
+function coverOf(el, w, h) {
+  const [px, py] = getComputedStyle(el).objectPosition.split(' ').map(parseFloat);
+  const k = Math.max(w / el.naturalWidth, h / el.naturalHeight);
+  return { w: el.naturalWidth * k, h: el.naturalHeight * k, x: (w - el.naturalWidth * k) * px / 100, y: (h - el.naturalHeight * k) * py / 100 };
+}
 async function reveal() {
-  const img = $('img', iris);
-  iris.hidden = false;
+  const img = $('img', iris), small = $('#gletter img');
   try { await Promise.race([img.decode(), wait(900)]); } catch (e) {}
-  const r = $('#gletter').getBoundingClientRect(), W = innerWidth, H = innerHeight;
-  const from = `inset(${Math.max(0, r.top)}px ${Math.max(0, W - r.right)}px ${Math.max(0, H - r.bottom)}px ${Math.max(0, r.left)}px round 3px)`;
-  const dur = reduce ? 1 : 1350;
-  const opts = { duration: dur, easing: 'cubic-bezier(.76,0,.24,1)', fill: 'forwards' };
+
+  // Start the full-screen photo exactly on top of the letter's photo, same crop and
+  // same size, so what follows reads as that one photo growing rather than a new one.
+  iris.style.visibility = 'hidden';
+  iris.hidden = false;
+  const r = small.getBoundingClientRect(), W = iris.clientWidth, H = iris.clientHeight;
+  const from = `inset(${Math.max(0, r.top)}px ${Math.max(0, W - r.right)}px ${Math.max(0, H - r.bottom)}px ${Math.max(0, r.left)}px round 1px)`;
+  const big = coverOf(img, W, H), lil = coverOf(small, r.width, r.height);
+  const dur = reduce ? 1 : 1750;
+  const opts = { duration: dur, easing: 'cubic-bezier(.62,0,.14,1)', fill: 'forwards' };
+  // The whole picture, not just the part a full-screen crop would keep: scaled down, the
+  // sides that are off-screen at full size are needed to fill the letter's wider shape.
+  Object.assign(img.style, { position: 'absolute', left: 0, top: 0, width: big.w + 'px', height: big.h + 'px', maxWidth: 'none', objectFit: 'fill', transformOrigin: '0 0' });
   const a = iris.animate([{ clipPath: from }, { clipPath: 'inset(0px 0px 0px 0px round 0px)' }], opts);
-  img.animate([{ transform: 'scale(1.14)' }, { transform: 'scale(1)' }], opts);
-  gate.classList.add('fade');
-  setTimeout(() => hero.classList.add('on'), dur * .62);
+  img.animate([
+    { transform: `translate(${r.left + lil.x}px,${r.top + lil.y}px) scale(${lil.w / big.w})` },
+    { transform: `translate(${big.x}px,${big.y}px) scale(1)` }
+  ], opts);
+  iris.style.visibility = '';
+  setTimeout(() => petals(70), dur * .42);
+  setTimeout(() => hero.classList.add('on'), dur * .8);
   try { await a.finished; } catch (e) {}
   root.classList.remove('locked');
   root.classList.add('unlocked');
