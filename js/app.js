@@ -276,7 +276,7 @@ const WISH_URL = 'https://soliha-tilak.vercel.app/api/tilak';   // relay/api/til
 const wishTrial = new URLSearchParams(location.search).get('sinov');
 const tilak = $('#tilak'), tForm = $('#tForm'), tSheet = $('#tSheet'), tText = $('#tText'), tFile = $('#tFile');
 const tAdd = $('#tAdd'), tPhoto = $('#tPhoto'), tImg = $('#tImg'), tErr = $('#tErr'), tSend = $('#tSend');
-let tBlob = null, sending = false, goldOn = false;
+let tBlob = null, sending = false, goldOn = false, wishSent = false;
 
 $('#tDate').textContent = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
 
@@ -493,7 +493,7 @@ tForm.addEventListener('submit', async e => {
   if (!text && !tBlob) { tErr.textContent = 'Avval bir-ikki so‘z yozing yoki rasm qo‘shing.'; tText.focus(); return; }
 
   sending = true; blow.disabled = true; tErr.textContent = '';
-  const arrived = deliver(text, tBlob).then(() => true, () => false);
+  const arrived = deliver(text, tBlob).then(() => { wishSent = true; return true; }, () => false);
   const failed = 'Xat yo‘lda qoldi. Bir ozdan keyin yana jo‘natib ko‘ring. Yozganingiz o‘chmadi.';
 
   if (reduce) {
@@ -542,6 +542,58 @@ tForm.addEventListener('submit', async e => {
   resetLetter();
   sending = false; blow.disabled = false;
 });
+
+/* ---------- passing the letter by: a kitten in tears asks her to come back ---------- */
+const PLEA_CAT = `<svg class="plea__cat" width="106" height="97" viewBox="0 0 120 110" aria-hidden="true">
+  <path d="M34 110c-2-24 8-40 26-40s28 16 26 40z" fill="#fbf0e2"/>
+  <path d="M26 40 11 17l32 7z" fill="#f6e7d5"/><path d="M29 31 20 23l15 3z" fill="#f2b8b5"/>
+  <path d="M94 40l15-23-32 7z" fill="#f6e7d5"/><path d="M91 31l9-8-15 3z" fill="#f2b8b5"/>
+  <ellipse cx="60" cy="47" rx="37" ry="31" fill="#fff8ee"/>
+  <path d="M33 32c5-1.5 11-3.5 16-7M87 32c-5-1.5-11-3.5-16-7" stroke="#b98f78" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  <ellipse cx="44" cy="47" rx="10.5" ry="12" fill="#2a1410"/><ellipse cx="76" cy="47" rx="10.5" ry="12" fill="#2a1410"/>
+  <circle cx="47.5" cy="41.5" r="4" fill="#fff"/><circle cx="79.5" cy="41.5" r="4" fill="#fff"/>
+  <circle cx="40.5" cy="50" r="2.2" fill="#fff"/><circle cx="72.5" cy="50" r="2.2" fill="#fff"/>
+  <path class="plea__wet" d="M34.5 51c2 8.5 17 8.5 19 0-3 3.5-16 3.5-19 0zM66.5 51c2 8.5 17 8.5 19 0-3 3.5-16 3.5-19 0z" fill="#a6dbf8"/>
+  <ellipse cx="29" cy="60" rx="5.5" ry="3.4" fill="#f4b0ab" opacity=".85"/><ellipse cx="91" cy="60" rx="5.5" ry="3.4" fill="#f4b0ab" opacity=".85"/>
+  <path d="M57 60h6l-3 3z" fill="#d9666e"/>
+  <path d="M52.5 70c2.5-4 12.5-4 15 0" stroke="#6b3a35" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path class="plea__tear" d="M38 57c-2.4 3.6-3.8 5.8-3.8 7.7a3.8 3.8 0 0 0 7.6 0c0-1.9-1.4-4.1-3.8-7.7z" fill="#8fd0f6"/>
+  <path class="plea__tear plea__tear--b" d="M82 57c-2.4 3.6-3.8 5.8-3.8 7.7a3.8 3.8 0 0 0 7.6 0c0-1.9-1.4-4.1-3.8-7.7z" fill="#8fd0f6"/>
+  <path d="M60 80 46 73v15zM60 80l14-7v15z" fill="#8d0f1f"/><circle cx="60" cy="80" r="3.6" fill="#b3141f"/>
+  <ellipse cx="51.5" cy="96" rx="10" ry="8.5" fill="#fffaf2"/><ellipse cx="68.5" cy="96" rx="10" ry="8.5" fill="#fffaf2"/>
+  <path d="M60 89v14" stroke="#ecd4ba" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+const plea = document.createElement('div');
+plea.className = 'plea';
+plea.setAttribute('role', 'status');
+plea.innerHTML = `${PLEA_CAT}<div class="plea__box"><p class="plea__title"></p><p class="plea__text"></p><div class="plea__btns"><button class="plea__go" type="button"></button><button class="plea__no" type="button">Keyinroq</button></div></div>`;
+document.body.appendChild(plea);
+let pleaCount = 0, pleaTimer = 0;
+const hidePlea = () => { clearTimeout(pleaTimer); plea.classList.remove('show'); };
+function showPlea() {
+  if (wishSent || sending || pleaCount >= 2) return;   // asking twice is sweet, a third time is nagging
+  pleaCount++;
+  const [title, text, go] = lit
+    ? ['Iltimos, o‘tib ketmang 🥺', 'Shamlarni puflang-da, bir og‘iz yozib keting.', 'Qaytaman']
+    : tText.value.trim() || tBlob
+      ? ['Xatingiz jo‘natilmadi 🥺', 'Iltimos, «Jo‘natish»ni bosib keting.', 'Jo‘nataman']
+      : ['Iltimos, nimadur yozing 🥺', 'Bo‘sh qoldirmang, bitta «salom» ham yetadi.', 'Yozaman'];
+  $('.plea__title', plea).textContent = title;
+  $('.plea__text', plea).textContent = text;
+  $('.plea__go', plea).textContent = go;
+  plea.classList.add('show');
+  clearTimeout(pleaTimer);
+  pleaTimer = setTimeout(hidePlea, 9000);
+}
+$('.plea__no', plea).addEventListener('click', hidePlea);
+$('.plea__go', plea).addEventListener('click', () => {
+  hidePlea();
+  (lit ? candles : tSheet).scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+});
+new IntersectionObserver(([e]) => {
+  if (e.isIntersecting) hidePlea();
+  else if (e.boundingClientRect.bottom < 0) showPlea();
+}).observe($('.wish__next'));
 function petals(count) {
   if (reduce) return;
   const cv = $('#petals'), g = cv.getContext('2d'), dpr = Math.min(devicePixelRatio || 1, 1.5);
