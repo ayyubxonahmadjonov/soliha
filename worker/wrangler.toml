@@ -1,0 +1,5 @@
+name = "soliha-tilak"
+main = "tilak.js"
+compatibility_date = "2026-10-01"
+# BOT_TOKEN and CHAT_ID are set with `wrangler secret put`, never written here:
+# this repository is public.

@@ -244,22 +244,307 @@ for (let i = 0; i < 18; i++) {
 }
 const blow = $('#blow'), wish = $('#wish');
 let lit = true;
+async function relight(gap = 0) {
+  lit = true; candles.classList.remove('out'); wish.classList.remove('done');
+  blow.textContent = 'Shamlarni puflash'; blow.classList.remove('btn--ghost');
+  // From the middle outwards.
+  const list = $$('.candle', candles).map((c, i) => [Math.abs(i - 8.5), c]).sort((a, b) => a[0] - b[0]);
+  for (const [, c] of list) { c.classList.remove('out'); if (gap) await wait(gap); }
+}
 blow.addEventListener('click', async () => {
   const list = $$('.candle', candles);
   if (lit) {
     lit = false; blow.disabled = true;
     if (navigator.vibrate) navigator.vibrate(20);
+    wish.classList.remove('sent');
     candles.classList.add('out');
     for (let i = 0; i < list.length; i++) { list[i].classList.add('out'); await wait(reduce ? 0 : 48); }
     await wait(reduce ? 0 : 320);
     petals(170);
     wish.classList.add('done');
     blow.textContent = 'Yana yoqish'; blow.disabled = false; blow.classList.add('btn--ghost');
+    if (wishOn) { await wait(reduce ? 0 : 1500); if (!lit) tilak.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' }); }
   } else {
-    lit = true; candles.classList.remove('out'); wish.classList.remove('done');
-    list.forEach(c => c.classList.remove('out'));
-    blow.textContent = 'Shamlarni puflash'; blow.classList.remove('btn--ghost');
+    relight();
   }
+});
+
+/* ---------- the wish letter ---------- */
+const WISH_URL = '';     // the Telegram relay (worker/tilak.js). The bot's token never reaches this page.
+// ?sinov rehearses everything but the sending; ?sinov=xato rehearses a failed send.
+const wishTrial = new URLSearchParams(location.search).get('sinov');
+const wishOn = !!WISH_URL || wishTrial !== null;
+const tilak = $('#tilak'), tForm = $('#tForm'), tSheet = $('#tSheet'), tText = $('#tText'), tFile = $('#tFile');
+const tAdd = $('#tAdd'), tPhoto = $('#tPhoto'), tImg = $('#tImg'), tErr = $('#tErr'), tSend = $('#tSend');
+let tBlob = null, sending = false, goldOn = false;
+
+if (wishOn) {
+  tilak.hidden = false;
+  $('#wishDone').remove();       // "tell no one" belongs to the version with no letter
+  $('#tDate').textContent = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
+}
+
+/* Re-encoding shrinks the photo and also drops its EXIF, location included. */
+async function shrinkPhoto(file, max = 1600) {
+  const url = URL.createObjectURL(file);
+  try {
+    const im = new Image();
+    im.src = url;
+    await im.decode();
+    const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    return await new Promise((ok, no) => c.toBlob(b => (b ? ok(b) : no(new Error('encode'))), 'image/jpeg', .86));
+  } finally { URL.revokeObjectURL(url); }
+}
+function setPhoto(blob) {
+  if (tImg.src) URL.revokeObjectURL(tImg.src);
+  tBlob = blob;
+  if (blob) tImg.src = URL.createObjectURL(blob); else tImg.removeAttribute('src');
+  tPhoto.hidden = !blob; tAdd.hidden = !!blob;
+}
+tFile.addEventListener('change', async () => {
+  const f = tFile.files[0];
+  tFile.value = '';
+  if (!f) return;
+  tErr.textContent = '';
+  try {
+    setPhoto(await shrinkPhoto(f));
+    await tImg.decode();
+    tPhoto.style.setProperty('--ar', (tImg.naturalWidth / tImg.naturalHeight).toFixed(3));
+  }
+  catch (e) { setPhoto(null); tErr.textContent = 'Bu rasmni ochib bo‘lmadi. Boshqasini tanlab ko‘ring.'; }
+});
+$('#tRemove').addEventListener('click', () => setPhoto(null));
+
+async function deliver(text, photo) {
+  if (wishTrial !== null) {
+    await wait(500);
+    if (wishTrial === 'xato') throw new Error('trial failure');
+    return;
+  }
+  const body = new FormData();
+  body.set('text', text);
+  if (photo) body.set('photo', photo, 'tilak.jpg');
+  const stop = new AbortController(), timer = setTimeout(() => stop.abort(), 30000);
+  try {
+    const r = await fetch(WISH_URL, { method: 'POST', body, signal: stop.signal });
+    if (!r.ok) throw new Error('relay ' + r.status);
+  } finally { clearTimeout(timer); }
+}
+
+/* The sheet as a picture, measured from the page so the hand-over to the canvas doesn't show. */
+function paintSheet() {
+  const box = tSheet.getBoundingClientRect(), W = box.width, H = box.height, k = Math.min(devicePixelRatio || 1, 2);
+  const c = document.createElement('canvas');
+  c.width = Math.round(W * k); c.height = Math.round(H * k);
+  const g = c.getContext('2d');
+  g.scale(k, k);
+  g.fillStyle = '#f8efe1'; g.fillRect(0, 0, W, H);
+  const at = el => { const b = el.getBoundingClientRect(); return { x: b.left - box.left, y: b.top - box.top, w: b.width, h: b.height }; };
+  const fontOf = el => { const s = getComputedStyle(el); return `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${s.fontFamily}`; };
+  const baseline = (top, height) => {
+    const m = g.measureText('Hg');
+    const asc = m.fontBoundingBoxAscent || parseFloat(g.font) * .8, desc = m.fontBoundingBoxDescent || parseFloat(g.font) * .2;
+    return top + (height + asc - desc) / 2;
+  };
+
+  const title = $('#tTitle'), date = $('#tDate'), tr = at(title), dr = at(date);
+  g.textBaseline = 'alphabetic';
+  g.font = fontOf(title); g.fillStyle = getComputedStyle(title).color;
+  g.fillText(title.textContent, tr.x, baseline(tr.y, tr.h));
+  g.font = fontOf(date); g.fillStyle = getComputedStyle(date).color;
+  if ('letterSpacing' in g) g.letterSpacing = getComputedStyle(date).letterSpacing;
+  g.fillText(date.textContent, dr.x, baseline(dr.y, dr.h));
+  if ('letterSpacing' in g) g.letterSpacing = '0px';
+
+  if (tBlob) {
+    const pr = at(tPhoto), w = tPhoto.offsetWidth, h = tPhoto.offsetHeight, pad = parseFloat(getComputedStyle(tPhoto).paddingLeft);
+    g.save();
+    g.translate(pr.x + pr.w / 2, pr.y + pr.h / 2);
+    g.rotate(-1.6 * Math.PI / 180);
+    g.save();
+    g.shadowColor = 'rgba(60,20,20,.3)'; g.shadowBlur = 10 * k; g.shadowOffsetY = 3 * k;
+    g.fillStyle = '#fffdf8'; g.fillRect(-w / 2, -h / 2, w, h);
+    g.restore();
+    const iw = w - pad * 2, ih = h - pad * 2, nw = tImg.naturalWidth, nh = tImg.naturalHeight;
+    const s = Math.max(iw / nw, ih / nh), cw = iw / s, ch = ih / s;
+    g.drawImage(tImg, (nw - cw) / 2, (nh - ch) / 2, cw, ch, -iw / 2, -ih / 2, iw, ih);
+    const tape = $('.tape', tPhoto), tw = tape.offsetWidth, th = tape.offsetHeight;
+    g.save();
+    g.translate(tape.offsetLeft + tw / 2 - w / 2, tape.offsetTop + th / 2 - h / 2);
+    g.rotate(-5 * Math.PI / 180);
+    g.fillStyle = 'rgba(240,208,190,.88)'; g.fillRect(-tw / 2, -th / 2, tw, th);
+    g.restore();
+    g.restore();
+  }
+
+  const tb = at(tText), st = getComputedStyle(tText), lh = parseFloat(st.lineHeight);
+  g.save();
+  g.beginPath(); g.rect(tb.x, tb.y, tb.w, tb.h); g.clip();
+  g.fillStyle = 'rgba(141,15,31,.22)';
+  const scroll = tText.scrollTop;
+  for (let i = 1, y; (y = tb.y + i * lh - scroll) < tb.y + tb.h + lh; i++) g.fillRect(tb.x, y - 1, tb.w, 1);
+  g.font = fontOf(tText); g.fillStyle = st.color;
+  const lines = [];
+  for (const para of tText.value.split('\n')) {
+    let line = '';
+    for (const word of para.split(/(\s+)/)) {
+      if (g.measureText(line + word).width <= tb.w) { line += word; continue; }
+      if (line.trim()) { lines.push(line); line = ''; }
+      let rest = word.trimStart();
+      while (g.measureText(rest).width > tb.w) {
+        let n = rest.length;
+        while (n > 1 && g.measureText(rest.slice(0, n)).width > tb.w) n--;
+        lines.push(rest.slice(0, n)); rest = rest.slice(n);
+      }
+      line = rest;
+    }
+    lines.push(line);
+  }
+  lines.forEach((t, i) => g.fillText(t, tb.x, baseline(tb.y + i * lh - scroll, lh)));
+  g.restore();
+  return { canvas: c, box };
+}
+
+function startGold() {
+  if (goldOn) return;
+  goldOn = true;
+  const cv = document.createElement('canvas');
+  cv.className = 'wish__gold'; cv.setAttribute('aria-hidden', 'true');
+  wish.prepend(cv);
+  const g = cv.getContext('2d'), dpr = Math.min(devicePixelRatio || 1, 1.5);
+  const TONES = ['#fff4c9', '#f7dc97', '#ecbd6e', '#c8933f'];
+  let W = 0, H = 0, flakes = [], raf = 0, last = 0, born = performance.now();
+  const flake = (top) => {
+    const shine = Math.random() < .22;
+    return {
+      x: Math.random() * W, y: top ? -Math.random() * H * .8 - 10 : Math.random() * H,
+      fall: 20 + Math.random() * 38, sway: Math.random() * 6.28, swaySp: .5 + Math.random() * 1.1,
+      rot: Math.random() * 6.28, rotSp: (Math.random() - .5) * 1.5, spin: Math.random() * 6.28, spinSp: 1.5 + Math.random() * 3.5,
+      r: shine ? 3 + Math.random() * 4 : 1.9 + Math.random() * 3.2, shine
+    };
+  };
+  const fit = () => {
+    W = wish.clientWidth; H = wish.clientHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const want = Math.round(Math.min(230, W * H / 2800));
+    while (flakes.length < want) flakes.push(flake(!reduce));
+    flakes.length = want;
+  };
+  const paint = (now, dt) => {
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    // A first rush of gold, easing into a steady drift.
+    const rush = 1 + 3.2 * Math.exp(-(now - born) / 1500);
+    for (const p of flakes) {
+      p.y += p.fall * rush * dt; p.sway += p.swaySp * dt; p.rot += p.rotSp * dt; p.spin += p.spinSp * dt;
+      if (p.y > H + 12) { p.y = -12; p.x = Math.random() * W; }
+      const x = p.x + Math.sin(p.sway) * 14, edge = clamp(Math.min(p.y / 70, (H - p.y) / 90));
+      if (edge <= 0) continue;
+      const face = Math.cos(p.spin);
+      if (p.shine) {
+        const r = p.r * (1.2 + .9 * Math.abs(face)), w = r * .16;
+        g.globalCompositeOperation = 'lighter';
+        g.globalAlpha = edge * (.3 + .7 * Math.abs(face));
+        g.fillStyle = TONES[0];
+        g.beginPath();
+        g.moveTo(x, p.y - r); g.lineTo(x + w, p.y - w); g.lineTo(x + r, p.y); g.lineTo(x + w, p.y + w);
+        g.lineTo(x, p.y + r); g.lineTo(x - w, p.y + w); g.lineTo(x - r, p.y); g.lineTo(x - w, p.y - w);
+        g.closePath(); g.fill();
+        g.globalCompositeOperation = 'source-over';
+      } else {
+        g.save();
+        g.translate(x, p.y); g.rotate(p.rot); g.scale(Math.max(.28, Math.abs(face)), 1);
+        g.globalAlpha = edge * .95;
+        g.fillStyle = TONES[Math.min(3, Math.floor((1 - Math.abs(face)) * 4))];
+        g.beginPath();
+        g.moveTo(0, -p.r); g.lineTo(p.r * .8, -p.r * .1); g.lineTo(p.r * .3, p.r); g.lineTo(-p.r * .7, p.r * .4);
+        g.closePath(); g.fill();
+        g.restore();
+      }
+    }
+    g.globalAlpha = 1;
+  };
+  const step = now => {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    paint(now, dt);
+    raf = requestAnimationFrame(step);
+  };
+  const run = () => { cancelAnimationFrame(raf); last = performance.now(); raf = requestAnimationFrame(step); };
+  fit();
+  new ResizeObserver(() => { fit(); if (reduce) paint(performance.now(), 0); }).observe(wish);
+  if (reduce) { paint(performance.now(), 0); return; }
+  new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) run(); else cancelAnimationFrame(raf);
+  }).observe(wish);
+  born = performance.now();
+  run();
+}
+
+function resetLetter() {
+  tText.value = ''; tText.scrollTop = 0;
+  setPhoto(null);
+  tErr.textContent = '';
+  tForm.classList.remove('folding', 'preparing');
+}
+
+tForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (sending) return;
+  const text = tText.value.trim();
+  if (!text && !tBlob) { tErr.textContent = 'Avval bir-ikki so‘z yozing yoki rasm qo‘shing.'; tText.focus(); return; }
+
+  sending = true; blow.disabled = true; tErr.textContent = '';
+  const arrived = deliver(text, tBlob).then(() => true, () => false);
+  const failed = 'Xat yo‘lda qoldi. Internetni tekshirib, yana bir bor jo‘nating. Yozganingiz o‘chmadi.';
+
+  if (reduce) {
+    if (await arrived) { startGold(); resetLetter(); relight(); wish.classList.add('sent'); }
+    else tErr.textContent = failed;
+    sending = false; blow.disabled = false;
+    return;
+  }
+
+  // Let a phone's keyboard go down first: it moves everything on the page.
+  if (document.activeElement === tText) { tText.blur(); await wait(340); }
+  const b = tSheet.getBoundingClientRect();
+  if (b.top < 12 || b.bottom > innerHeight - 12) {
+    tSheet.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    await wait(520);
+  }
+  tForm.classList.add('preparing');
+  await wait(180);
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+  const { canvas, box } = paintSheet();
+  const plane = PaperPlane.create(box, canvas);
+  tForm.classList.add('folding');
+  await plane.fold();
+
+  if (!await plane.hold(arrived)) {
+    await plane.unfold();
+    tForm.classList.remove('folding', 'preparing');
+    plane.destroy();
+    tErr.textContent = failed;
+    sending = false; blow.disabled = false;
+    return;
+  }
+
+  const flight = plane.fly();
+  await wait(650);
+  candles.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  wish.classList.remove('done');
+  wish.classList.add('sent');
+  await wait(450);
+  startGold();
+  await wait(750);
+  await relight(70);
+  await flight;
+  plane.destroy();
+  resetLetter();
+  sending = false; blow.disabled = false;
 });
 function petals(count) {
   if (reduce) return;

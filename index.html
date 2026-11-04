@@ -18,7 +18,7 @@
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/HerrVonMuellerhoff-normal.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/Allura-normal.woff2" crossorigin>
 <link rel="preload" as="image" href="assets/img/hero-800.webp" imagesrcset="assets/img/hero-800.webp 800w, assets/img/hero-1500.webp 1285w" imagesizes="100vw">
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
@@ -173,6 +173,45 @@
     <div class="candles" id="candles" aria-hidden="true"></div>
     <button class="btn" id="blow" type="button">Shamlarni puflash</button>
     <p class="wish__done" id="wishDone">Tilak qabul qilindi. Uni hech kimga aytmang — shunda ushaladi.</p>
+
+    <!-- the wish letter: folds into a plane when sent -->
+    <div class="tilak" id="tilak" hidden>
+      <div class="tilak__in">
+        <p class="tilak__ask">Tilak qildingizmi?</p>
+        <p class="tilak__lead">Agar tilak qilgan bo‘lsangiz, uni shu yerga yozib qoldirishingiz mumkin. Kerakli insonga yetkazamiz.</p>
+        <form class="tilak__form" id="tForm" novalidate>
+          <div class="sheet" id="tSheet">
+            <div class="sheet__in">
+              <div class="sheet__head">
+                <span class="sheet__title" id="tTitle">Mening tilagim</span>
+                <span class="mono sheet__date" id="tDate"></span>
+              </div>
+              <label class="sheet__add" id="tAdd">
+                <input class="sheet__file" id="tFile" type="file" accept="image/*">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+                <span>Rasm qo‘shish</span><small>ixtiyoriy</small>
+              </label>
+              <figure class="sheet__photo" id="tPhoto" hidden>
+                <span class="tape"></span>
+                <img id="tImg" alt="Siz tanlagan rasm">
+                <button class="sheet__rm" id="tRemove" type="button" aria-label="Rasmni olib tashlash">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>
+                </button>
+              </figure>
+              <textarea class="sheet__text" id="tText" maxlength="1500" placeholder="Tilagingizni shu yerga yozing…" aria-label="Tilagingiz"></textarea>
+            </div>
+          </div>
+          <p class="tilak__err" id="tErr" role="alert"></p>
+          <button class="tilak__send" id="tSend" type="submit">
+            <span>Jo‘natish</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 2.5 2 10.6l6.4 2.7 1.4 7.2 3.5-4.6 5 2.6z"/></svg>
+          </button>
+          <p class="mono tilak__who">Xatni shu saytni sizga yuborgan inson o‘qiydi.</p>
+        </form>
+      </div>
+    </div>
+    <p class="tilak__sent" role="status">Xatingiz yo‘lga chiqdi. Yetib borguncha shamlar yonib tursin.</p>
+
     <p class="mono wish__next">Keyingi tug‘ilgan kuningizgacha <span id="nextN">—</span> kun qoldi</p>
   </div>
 </section>
@@ -421,6 +460,7 @@
 
 <canvas id="petals" aria-hidden="true"></canvas>
 <noscript><style>.gate,.iris{display:none}html.locked,html.locked body{overflow:auto;height:auto}</style></noscript>
-<script src="js/app.js?v=12"></script>
+<script src="js/plane.js?v=13"></script>
+<script src="js/app.js?v=13"></script>
 </body>
 </html>
