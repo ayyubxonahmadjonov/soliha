@@ -176,13 +176,11 @@ figcaption{margin-top:.8em;font-family:var(--serif);font-style:italic;font-size:
 .candle.out .flame{animation:none;opacity:0;transform:scale(.3,.2)}
 .candle.out::after{content:"";position:absolute;left:50%;bottom:calc(100% + 4px);width:7px;height:44px;margin-left:-3.5px;border-radius:50%;background:linear-gradient(transparent,rgba(246,234,219,.32));filter:blur(3px);animation:smoke 1.8s ease-out forwards}
 @keyframes smoke{0%{opacity:0;transform:scale(.4) translateY(8px)}30%{opacity:1}100%{opacity:0;transform:translate(7px,-44px) scale(1.5)}}
-.wish__done{max-width:22em;margin:1.4em auto 0;font-family:var(--serif);font-style:italic;font-size:clamp(1.3rem,1.05rem + 1vw,1.9rem);line-height:1.25;color:var(--amber);opacity:0;transform:translateY(12px);transition:opacity 1s .5s,transform 1s .5s}
-.wish.done .wish__done{opacity:1;transform:none}
 .wish__next{margin-top:2.4em;opacity:.65}
 #petals{position:fixed;inset:0;z-index:90;width:100%;height:100%;pointer-events:none;display:none}
 
 /* ============ THE WISH LETTER ============ */
-.tilak[hidden],.sheet__add[hidden],.sheet__photo[hidden]{display:none}
+.sheet__add[hidden],.sheet__photo[hidden]{display:none}
 .tilak{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;transition:grid-template-rows .9s var(--ease),opacity .5s,visibility 0s .9s}
 .wish.done .tilak{grid-template-rows:1fr;opacity:1;visibility:visible;transition:grid-template-rows 1s var(--ease) .2s,opacity .9s .5s,visibility 0s}
 .tilak__in{min-height:0;overflow:hidden}

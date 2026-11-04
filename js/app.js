@@ -263,26 +263,22 @@ blow.addEventListener('click', async () => {
     petals(170);
     wish.classList.add('done');
     blow.textContent = 'Yana yoqish'; blow.disabled = false; blow.classList.add('btn--ghost');
-    if (wishOn) { await wait(reduce ? 0 : 1500); if (!lit) tilak.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' }); }
+    await wait(reduce ? 0 : 1500);
+    if (!lit) tilak.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
   } else {
     relight();
   }
 });
 
 /* ---------- the wish letter ---------- */
-const WISH_URL = '';     // the Telegram relay (worker/tilak.js). The bot's token never reaches this page.
+const WISH_URL = 'https://soliha-tilak.vercel.app/api/tilak';   // relay/api/tilak.js holds the bot's token, not this page
 // ?sinov rehearses everything but the sending; ?sinov=xato rehearses a failed send.
 const wishTrial = new URLSearchParams(location.search).get('sinov');
-const wishOn = !!WISH_URL || wishTrial !== null;
 const tilak = $('#tilak'), tForm = $('#tForm'), tSheet = $('#tSheet'), tText = $('#tText'), tFile = $('#tFile');
 const tAdd = $('#tAdd'), tPhoto = $('#tPhoto'), tImg = $('#tImg'), tErr = $('#tErr'), tSend = $('#tSend');
 let tBlob = null, sending = false, goldOn = false;
 
-if (wishOn) {
-  tilak.hidden = false;
-  $('#wishDone').remove();       // "tell no one" belongs to the version with no letter
-  $('#tDate').textContent = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
-}
+$('#tDate').textContent = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
 
 /* Re-encoding shrinks the photo and also drops its EXIF, location included. */
 async function shrinkPhoto(file, max = 1600) {
