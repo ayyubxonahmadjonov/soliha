@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#c39b74">
+<meta name="robots" content="noindex,nofollow">
+<title>Bir dona gul</title>
+<link rel="preload" href="assets/fonts/Fraunces-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Manrope.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/gul.css?v=1">
+</head>
+<body>
+
+<!-- The whole show is drawn here: ink-and-watercolour flowers (svg), petals (canvas), photos and words (html). -->
+<main class="stage" id="stage" aria-live="polite">
+  <div class="glow" id="glow"></div>
+  <svg class="ink" id="ink" aria-hidden="true"></svg>
+
+  <div class="heart" id="heart"></div>
+
+  <div class="say say--top">
+    <p class="ln" data-in="b0" data-out="b1">Sizga ko‘p gul berishgandir.</p>
+    <p class="ln" data-in="b1" data-out="b2">Tug‘ilgan kunlarda, bayramlarda, ba’zan sababsiz.</p>
+    <p class="ln" data-in="b2" data-out="b3">Har biri sizni bir oz xursand qilgandir.</p>
+    <p class="ln" data-in="b3" data-out="b4">Bu gul ularning eng chiroylisi bo‘lmasligi mumkin.</p>
+    <p class="ln ln--key" data-in="b4" data-out="lift">
+      <span data-in="b4">Shunchaki, men bergan bu gul ham</span>
+      <span data-in="b5">siz qabul qilgan <em>gullar qatoriga</em> qo‘shilishini xohladim.</span>
+      <span class="xolos" data-in="b6">Xolos.</span>
+    </p>
+  </div>
+
+  <div class="say say--low" id="sayLow">
+    <p class="ln" data-in="b9" data-out="b10">Qo‘lingizdagi gul bir kun so‘liydi.</p>
+    <p class="ln" data-in="b10" data-out="b11">Bunisi esa hech qachon.</p>
+    <p class="ln" data-in="b11" data-out="b13">Har safar ochganingizda, u yana <em>ochiladi</em>.</p>
+    <p id="count" class="ln ln--count" data-in="b13" data-out="never">So‘limaydigan gul · 1-kun</p>
+  </div>
+
+  <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+  <div class="flash" id="flash"></div>
+
+  <div class="fin" id="fin">
+    <p class="fin__hint">Rasmlarga bosib ko‘ring</p>
+    <button class="fin__again" id="again" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>Yana bir bor</button>
+  </div>
+</main>
+
+<!-- Florist's kraft paper with a ribbon: untying it is the tap that lets the song play. -->
+<div class="gate" id="gate">
+  <div class="kraft kraft--l"><i class="crease"></i><i class="band"></i></div>
+  <div class="kraft kraft--r"><i class="crease"></i><i class="band"></i></div>
+  <p class="gate__stamp"><b>bir dona gul</b><i></i><small>qo‘lda bog‘langan</small></p>
+  <button class="bow" id="bow" type="button" aria-label="Lentani yechish" disabled>
+    <svg viewBox="-110 -70 220 150" aria-hidden="true">
+      <defs>
+        <linearGradient id="sat" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#d9566f"/><stop offset=".45" stop-color="#a8243f"/><stop offset=".7" stop-color="#c73d58"/><stop offset="1" stop-color="#7f1530"/>
+        </linearGradient>
+      </defs>
+      <g class="bow__tail bow__tail--l"><path d="M-6 6 C-18 26 -32 44 -50 60 L-35 58 L-31 73 C-14 52 -2 32 4 10 Z" fill="url(#sat)"/></g>
+      <g class="bow__tail bow__tail--r"><path d="M6 6 C18 26 32 44 50 60 L35 58 L31 73 C14 52 2 32 -4 10 Z" fill="url(#sat)"/></g>
+      <g class="bow__loop bow__loop--l"><path d="M-8 -4 C-40 -56 -104 -50 -96 -6 C-90 26 -40 18 -8 6 Z" fill="url(#sat)"/><path d="M-14 -2 C-44 -36 -84 -36 -82 -10" fill="none" stroke="#f3a3b2" stroke-width="2.4" stroke-linecap="round" opacity=".55"/></g>
+      <g class="bow__loop bow__loop--r"><path d="M8 -4 C40 -56 104 -50 96 -6 C90 26 40 18 8 6 Z" fill="url(#sat)"/><path d="M14 -2 C44 -36 84 -36 82 -10" fill="none" stroke="#f3a3b2" stroke-width="2.4" stroke-linecap="round" opacity=".55"/></g>
+      <rect class="bow__knot" x="-15" y="-15" width="30" height="30" rx="10" fill="#9a1f39"/>
+    </svg>
+  </button>
+  <div class="tag" id="tag">
+    <i class="tag__string"></i>
+    <div class="tag__card">
+      <p class="tag__kicker" id="tagKicker">Qo‘lingizdagi gul bilan keldi</p>
+      <p class="tag__msg" id="gateMsg">Tayyorlanmoqda…</p>
+      <span class="tag__bar"><i id="gateBar"></i></span>
+    </div>
+  </div>
+  <p class="gate__sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>Ovozni balandroq qiling, sahifa qo‘shiq bilan ochiladi</p>
+</div>
+
+<button class="resume" id="resume" type="button" hidden>Davom ettirish</button>
+<div class="lb" id="lb" hidden><img alt=""></div>
+
+<audio id="song" preload="auto" playsinline></audio>
+<script src="js/gul.js?v=1"></script>
+</body>
+</html>
