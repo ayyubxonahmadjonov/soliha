@@ -16,8 +16,8 @@ const HUSH = 20.55, RISE = 21.62, LIFT = 22.15, DROP = bar(7), WHOLE = bar(8), E
 const TOKENS = { rise: RISE, lift: LIFT, drop: DROP, never: Infinity };
 const timeOf = (tok, out) => {
   if (tok in TOKENS) return TOKENS[tok];
-  const m = /^b(\d+)$/.exec(tok);
-  return m ? bar(+m[1]) - (out ? .32 : 0) : parseFloat(tok);
+  const m = /^([bk])(\d+)$/.exec(tok);          // b3 = the third bar, k13 = the thirteenth beat
+  return m ? (m[1] === 'b' ? bar(+m[2]) : beatAt(+m[2])) - (out ? .25 : 0) : parseFloat(tok);
 };
 
 /* ---- little maths ---- */
@@ -474,7 +474,7 @@ function render(t) {
   drawFx(t);
 }
 
-/* words arrive one by one, a sixteenth or an eighth apart */
+/* words arrive one by one, an eighth or a sixteenth apart */
 const cues = [];
 document.querySelectorAll('[data-in]').forEach(el => {
   let i = 0;
@@ -492,7 +492,7 @@ document.querySelectorAll('[data-in]').forEach(el => {
     }
   };
   walk(el);
-  el.style.setProperty('--st', `${i <= 5 ? HB : i <= 8 ? HB / 2 : HB / 4}s`);
+  el.style.setProperty('--st', `${i <= 5 ? HB / 2 : HB / 4}s`);   // a whole line is in place within about a second
   /* a part of a sentence leaves with its sentence */
   const parent = cues.find(c => c.el.contains(el));
   const b = el.dataset.out ? timeOf(el.dataset.out, true) : Infinity;

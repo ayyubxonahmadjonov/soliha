@@ -51,8 +51,9 @@ p{margin:0}
   font-size:clamp(1.42rem,1.02rem + 2vw,2.25rem);line-height:1.22;letter-spacing:-.005em;text-wrap:balance}
 .ln em{font-style:italic;color:var(--rose);font-weight:460}
 .ln--key{font-size:clamp(1.28rem,.98rem + 1.6vw,2rem)}
-.ln--key>span{display:block}
+.ln--key>span,.ln--pair>span{display:block}
 .ln--key>span+span{margin-top:.28em}
+.ln--pair>span+span{margin-top:.45em}
 .ln--key .xolos{margin-top:.62em;font-size:1.3em;color:var(--rose2);font-weight:430}
 .say--low .ln{font-size:clamp(1.2rem,.94rem + 1.4vw,1.8rem);color:var(--ink)}
 .ln--count{font-family:var(--sans)!important;font-style:normal!important;font-weight:700!important;font-size:.72rem!important;letter-spacing:.24em;text-transform:uppercase;color:var(--rose2)!important;line-height:1.6}
@@ -60,7 +61,7 @@ p{margin:0}
 .w{display:inline-block;opacity:0;filter:blur(7px);transform:translate3d(0,.42em,0);
   transition:opacity .45s ease,filter .45s ease,transform .5s ease}
 .on>.w,.on>em>.w{opacity:1;filter:blur(0);transform:none;
-  transition:opacity .9s ease calc(var(--i)*var(--st)),filter 1s ease calc(var(--i)*var(--st)),transform 1.15s var(--ease) calc(var(--i)*var(--st))}
+  transition:opacity .6s ease calc(var(--i)*var(--st)),filter .65s ease calc(var(--i)*var(--st)),transform .8s var(--ease) calc(var(--i)*var(--st))}
 
 /* ---------- the end ---------- */
 .fin{position:absolute;left:0;right:0;top:var(--finTop,82vh);z-index:8;display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;transform:translateY(10px);pointer-events:none;transition:opacity 1.2s ease,transform 1.2s var(--ease)}

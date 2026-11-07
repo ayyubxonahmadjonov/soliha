@@ -8,7 +8,7 @@
 <title>Bir dona gul</title>
 <link rel="preload" href="assets/fonts/Fraunces-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Manrope.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/gul.css?v=1">
+<link rel="stylesheet" href="css/gul.css?v=2">
 </head>
 <body>
 
@@ -20,10 +20,14 @@
   <div class="heart" id="heart"></div>
 
   <div class="say say--top">
-    <p class="ln" data-in="b0" data-out="b1">Sizga ko‘p gul berishgandir.</p>
-    <p class="ln" data-in="b1" data-out="b2">Tug‘ilgan kunlarda, bayramlarda, ba’zan sababsiz.</p>
-    <p class="ln" data-in="b2" data-out="b3">Har biri sizni bir oz xursand qilgandir.</p>
-    <p class="ln" data-in="b3" data-out="b4">Bu gul ularning eng chiroylisi bo‘lmasligi mumkin.</p>
+    <p class="ln ln--pair" data-in="k1" data-out="b2">
+      <span data-in="k1">Sizga ko‘p gul berishgandir.</span>
+      <span data-in="k4">Tug‘ilgan kunlarda, bayramlarda, ba’zan sababsiz.</span>
+    </p>
+    <p class="ln ln--pair" data-in="b2" data-out="b4">
+      <span data-in="b2">Har biri sizni bir oz xursand qilgandir.</span>
+      <span data-in="k13">Bu gul ularning eng chiroylisi bo‘lmasligi mumkin.</span>
+    </p>
     <p class="ln ln--key" data-in="b4" data-out="lift">
       <span data-in="b4">Shunchaki, men bergan bu gul ham</span>
       <span data-in="b5">siz qabul qilgan <em>gullar qatoriga</em> qo‘shilishini xohladim.</span>
@@ -32,9 +36,9 @@
   </div>
 
   <div class="say say--low" id="sayLow">
-    <p class="ln" data-in="b9" data-out="b10">Qo‘lingizdagi gul bir kun so‘liydi.</p>
-    <p class="ln" data-in="b10" data-out="b11">Bunisi esa hech qachon.</p>
-    <p class="ln" data-in="b11" data-out="b13">Har safar ochganingizda, u yana <em>ochiladi</em>.</p>
+    <p class="ln" data-in="k35" data-out="k42">Qo‘lingizdagi gul bir kun so‘liydi.</p>
+    <p class="ln" data-in="k42" data-out="k47">Bunisi esa hech qachon.</p>
+    <p class="ln" data-in="k47" data-out="b13">Har safar ochganingizda, u yana <em>ochiladi</em>.</p>
     <p id="count" class="ln ln--count" data-in="b13" data-out="never">So‘limaydigan gul · 1-kun</p>
   </div>
 
@@ -81,6 +85,6 @@
 <div class="lb" id="lb" hidden><img alt=""></div>
 
 <audio id="song" preload="auto" playsinline></audio>
-<script src="js/gul.js?v=1"></script>
+<script src="js/gul.js?v=2"></script>
 </body>
 </html>
