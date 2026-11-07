@@ -376,7 +376,7 @@ function seedParticles() {
     return { t0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120 * sc, s: (size[0] + r() * (size[1] - size[0])) * Math.max(.8, sc),
       a0: r() * 6.3, spin: (r() - .5) * 9, flip: 2 + r() * 5, ph: r() * 6.3, wob: 8 + r() * 22, col: PETAL_COLS[(r() * PETAL_COLS.length) | 0], life: 3.2 + r() * 1.6 };
   });
-  bursts = [...burst(DROP, 190, [380, 1200], [5, 12]), ...burst(WHOLE, 80, [200, 650], [4, 9])];
+  bursts = [...burst(DROP, 165, [380, 1200], [5, 12]), ...burst(WHOLE, 70, [200, 650], [4, 9])];
   ambient = Array.from({ length: 22 }, () => ({ x: r(), off: r(), vy: (34 + r() * 40) * Math.max(.8, sc), s: (4 + r() * 6) * Math.max(.8, sc),
     a0: r() * 6.3, spin: (r() - .5) * 2, flip: 1 + r() * 2.5, ph: r() * 6.3, wob: 14 + r() * 26, col: PETAL_COLS[(r() * PETAL_COLS.length) | 0] }));
   motes = Array.from({ length: 46 }, () => ({ x: r(), y: r(), sp: (7 + r() * 16) * Math.max(.8, sc), sw: 8 + r() * 26, ph: r() * 6.3, s: (.7 + r() * 1.7) * Math.max(.9, sc), gold: r() < .72, tw: 1 + r() * 2 }));
@@ -389,7 +389,7 @@ function petalOn(g, x, y, s, a, flip, col, alpha) {
   g.save(); g.translate(x, y); g.rotate(a); g.scale(1, .18 + .82 * Math.abs(Math.cos(flip)));
   g.globalAlpha = alpha; g.fillStyle = col;
   g.beginPath(); g.moveTo(0, -s); g.bezierCurveTo(s * .95, -s * .55, s * .7, s * .85, 0, s); g.bezierCurveTo(-s * .7, s * .85, -s * .95, -s * .55, 0, -s); g.fill();
-  g.globalAlpha = alpha * .35; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-s * .2, -s * .25, s * .18, s * .45, -.3, 0, 6.3); g.fill();
+  if (s > 6.5) { g.globalAlpha = alpha * .35; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-s * .2, -s * .25, s * .18, s * .45, -.3, 0, 6.3); g.fill(); }   // small ones do without the sheen
   g.restore();
 }
 const petal = (...a) => petalOn(cx, ...a);
@@ -772,7 +772,7 @@ function frame(now) {
   const t = clock(now);
   render(t, RENDER ? t * 1000 : now);
   if (t >= WHOLE !== tapLive) { tapLive = t >= WHOLE; tapEl.classList.toggle('live', tapLive); }
-  if (t >= END && !finished) { finished = true; fin.classList.add('show'); stage.classList.add('done'); if (!RENDER) setTimeout(prepWallpaper, 700); }
+  if (t >= END && !finished) { finished = true; fin.classList.add('show'); stage.classList.add('done'); }
   requestAnimationFrame(frame);
 }
 
@@ -963,11 +963,15 @@ function prepWallpaper() {
   return wpJob;
 }
 const wp = $('#wp');
-$('#keep').addEventListener('click', () => {
+/* made only when asked for: drawing it takes a moment, and the ending should not stutter for something she may not want */
+const keepBtn = $('#keep'), keepLabel = keepBtn.lastChild.textContent;
+keepBtn.addEventListener('click', () => {
+  if (!wpBlob) keepBtn.lastChild.textContent = 'Tayyorlanmoqda…';
   prepWallpaper().then(() => {
+    keepBtn.lastChild.textContent = keepLabel;
     wp.querySelector('img').src = wpURL;
     wp.hidden = false; requestAnimationFrame(() => wp.classList.add('on'));
-  }).catch(() => {});
+  }).catch(() => { keepBtn.lastChild.textContent = keepLabel; });
 });
 /* the share sheet is how an iPhone saves an image to Photos; elsewhere, a plain download */
 $('#wpSave').addEventListener('click', () => {
