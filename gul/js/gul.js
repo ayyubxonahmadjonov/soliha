@@ -772,7 +772,7 @@ function frame(now) {
   const t = clock(now);
   render(t, RENDER ? t * 1000 : now);
   if (t >= WHOLE !== tapLive) { tapLive = t >= WHOLE; tapEl.classList.toggle('live', tapLive); }
-  if (t >= END && !finished) { finished = true; fin.classList.add('show'); stage.classList.add('done'); }
+  if (t >= END && !finished) { finished = true; if (!RENDER) fin.classList.add('show'); stage.classList.add('done'); }   // a recording ends on the heart, without buttons
   requestAnimationFrame(frame);
 }
 
