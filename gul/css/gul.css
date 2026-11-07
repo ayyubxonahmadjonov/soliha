@@ -35,7 +35,11 @@ p{margin:0}
 .flash{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:6;background:radial-gradient(70% 55% at 50% 42%,#fff 0%,rgba(255,252,247,.94) 45%,rgba(255,246,240,.6) 100%)}
 
 /* ---------- photos that become the heart ---------- */
-.heart{position:absolute;inset:0;z-index:3;will-change:transform;pointer-events:none}
+.heart{position:absolute;inset:0;z-index:3;will-change:transform;pointer-events:none;transform-style:preserve-3d}
+.ink{will-change:transform}
+.tap{position:absolute;left:0;top:0;z-index:4;display:block;opacity:.001;pointer-events:none;border-radius:40%;-webkit-tap-highlight-color:transparent}
+.tap input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:.001}
+.done .tap,.tap.live{pointer-events:auto;cursor:pointer}
 .ph{position:absolute;left:0;top:0;display:block;width:var(--tw,64px);height:calc(var(--tw,64px)*1.17);background:#fffdf8;border-radius:3px;opacity:0;
   box-shadow:0 1px 1px rgba(60,25,30,.12),0 10px 22px -10px rgba(70,25,35,.55);will-change:transform,opacity;pointer-events:none;transform-origin:50% 50%}
 .ph::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
@@ -59,21 +63,28 @@ p{margin:0}
 .ln--pair>span+span{margin-top:.45em}
 .ln--key .xolos{margin-top:.62em;font-size:1.3em;color:var(--rose2);font-weight:430}
 .say--low .ln{font-size:clamp(1.2rem,.94rem + 1.4vw,1.8rem);color:var(--ink)}
-.ln--count{font-family:var(--sans)!important;font-style:normal!important;font-weight:700!important;font-size:.72rem!important;letter-spacing:.24em;text-transform:uppercase;color:var(--rose2)!important;line-height:1.6}
 
-.w{display:inline-block;opacity:0;filter:blur(7px);transform:translate3d(0,.42em,0);
-  transition:opacity .45s ease,filter .45s ease,transform .5s ease}
-.on>.w,.on>em>.w{opacity:1;filter:blur(0);transform:none;
-  transition:opacity .6s ease calc(var(--i)*var(--st)),filter .65s ease calc(var(--i)*var(--st)),transform .8s var(--ease) calc(var(--i)*var(--st))}
+/* every word is moved by the song's clock (see gul.js), so it lands on its sixteenth even in a recording */
+.w{display:inline-block;opacity:0;will-change:opacity,transform}
 
 /* ---------- the end ---------- */
 .fin{position:absolute;left:0;right:0;top:var(--finTop,82vh);z-index:8;display:flex;flex-direction:column;align-items:center;gap:12px;opacity:0;transform:translateY(10px);pointer-events:none;transition:opacity 1.2s ease,transform 1.2s var(--ease)}
 .fin.show{opacity:1;transform:none;pointer-events:auto}
 .fin__hint{font-size:.78rem;color:var(--ink2);letter-spacing:.02em}
-.fin__again{display:inline-flex;align-items:center;gap:.55em;padding:.78em 1.35em;border-radius:99px;font-weight:700;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--rose2);background:rgba(255,253,248,.7);
+.fin__row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:0 16px}
+.fin__btn{display:inline-flex;align-items:center;gap:.55em;padding:.78em 1.2em;border-radius:99px;font-weight:700;font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:var(--rose2);background:rgba(255,253,248,.72);white-space:nowrap;
   box-shadow:inset 0 0 0 1.5px rgba(140,23,51,.45),0 8px 20px -12px rgba(140,23,51,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:transform .3s var(--ease)}
-.fin__again:active{transform:scale(.96)}
-.fin__again svg{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.fin__btn--fill{background:var(--rose);color:#fff;box-shadow:0 10px 24px -10px rgba(140,23,51,.8)}
+.fin__btn:active{transform:scale(.96)}
+.fin__btn svg{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+.wp{position:fixed;inset:0;z-index:32;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:calc(18px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom));
+  background:rgba(58,30,34,.5);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);opacity:0;transition:opacity .4s ease}
+.wp.on{opacity:1}
+.wp img{max-height:calc(100% - 130px);max-width:100%;width:auto;border-radius:18px;box-shadow:0 30px 60px -20px rgba(40,10,20,.7);transform:scale(.92);transition:transform .55s cubic-bezier(.2,1.3,.4,1);-webkit-touch-callout:default}
+.wp.on img{transform:none}
+.wp__bar{display:flex;gap:10px}
+.wp__hint{font-size:.78rem;color:#fff;opacity:.85;text-align:center}
 
 .resume{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:40;padding:.95em 1.6em;border-radius:99px;background:var(--rose);color:#fff;font-weight:700;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;box-shadow:0 12px 28px -10px rgba(140,23,51,.8)}
 

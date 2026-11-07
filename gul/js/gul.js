@@ -7,6 +7,7 @@ const $ = s => document.querySelector(s);
 const qs = new URLSearchParams(location.search);
 const AT = qs.has('at') ? parseFloat(qs.get('at')) || 0 : null;     // rehearsal: no gate, no sound
 const RUN = qs.has('run');                                           // with ?at, keep the clock running
+const RENDER = qs.has('render');                                     // with ?at, frames are stepped from outside to make a video
 
 /* ---- the song, measured: 82 BPM (a resting heartbeat), first beat at 0.611 s, the drop at 22.56 s ---- */
 const BEAT = 0.73164835, HB = BEAT / 2, B0 = 0.611;
@@ -42,6 +43,10 @@ function pulse(t) {
 /* a softer tick for the quiet half: just the beat, no dub */
 const tick = t => { const d = t - beatAt(Math.floor((t - B0) / BEAT)); return Math.exp(-d / .16); };
 
+/* how far the phone is tilted, -1..1 on each axis, as last read and as eased toward */
+let tiltX = 0, tiltY = 0, tiltTX = 0, tiltTY = 0;
+const puffs = [];                                                    // petals that puff out when the tulips are touched
+
 const PAPER = '#f8f1e7', INK = '#5a4943', LEAF = '#6f8f5f', LEAF2 = '#4d6a45', STEM = '#55744b';
 
 /* ================= svg ================= */
@@ -62,10 +67,16 @@ function ramp(id, stops, attrs) {
   const els = stops.map(([o]) => mk('stop', { offset: o, 'stop-color': PAPER }, g));
   ramps.push({ stops, els });
 }
-ramp('tOut', [[0, '#5e0816'], [.32, '#a50f26'], [.72, '#d8233b'], [1, '#f05867']]);
-ramp('tFront', [[0, '#6b0a1b'], [.35, '#bd132c'], [.8, '#e8364b'], [1, '#f7838d']]);
-ramp('tIn', [[0, '#3e040f'], [.55, '#7d0b1e'], [1, '#b81d33']]);
-ramp('lf', [[0, LEAF2], [1, '#86a873']], { x1: 0, y1: 0, x2: 1, y2: 0 });
+const RAMPS = [
+  ['tOut', [[0, '#5e0816'], [.32, '#a50f26'], [.72, '#d8233b'], [1, '#f05867']]],
+  ['tFront', [[0, '#6b0a1b'], [.35, '#bd132c'], [.8, '#e8364b'], [1, '#f7838d']]],
+  ['tIn', [[0, '#3e040f'], [.55, '#7d0b1e'], [1, '#b81d33']]],
+  ['lf', [[0, LEAF2], [1, '#86a873']], { x1: 0, y1: 0, x2: 1, y2: 0 }]
+];
+for (const [id, stops, attrs] of RAMPS) ramp(id, stops, attrs);
+/* the same ramps in full colour, for drawing the bouquet into the wallpaper */
+const GRADS = RAMPS.map(([id, stops, a = { x1: 0, y1: 1, x2: 0, y2: 0 }]) =>
+  `<linearGradient id="${id}" x1="${a.x1}" y1="${a.y1}" x2="${a.x2}" y2="${a.y2}">${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`).join('');
 let rampC = -1;
 function paint(c) {
   c = Math.round(c * 200) / 200;
@@ -124,13 +135,11 @@ const bqBack = mk('g', { opacity: 0 }, svg);
 const bqStems = [-1, 0, 1].map(() => mk('path', { fill: 'none', stroke: STEM, 'stroke-width': 1.6, 'stroke-linecap': 'round', pathLength: 1, 'stroke-dasharray': '1 1' }, bqBack));
 const bqLeaves = [-1, 1].map(s => mk('path', { d: TLEAF, fill: 'url(#lf)', stroke: '#3a4a30', 'stroke-width': 1.4, 'stroke-linejoin': 'round' }, bqBack));
 const sideTulips = [-1, 1].map(() => makeTulip(bqBack, false));
+const BOW_MARKUP = '<path d="M-2 3C-10 18 -16 30 -26 42L-17 41L-15 50C-6 36 0 22 3 6Z" fill="#a8243f"/><path d="M2 3C10 18 16 30 26 42L17 41L15 50C6 36 0 22 -3 6Z" fill="#c33a56"/>' +
+  '<path d="M-4 -2C-22 -30 -56 -26 -52 -3C-48 15 -22 10 -4 3Z" fill="#c73d58"/><path d="M4 -2C22 -30 56 -26 52 -3C48 15 22 10 4 3Z" fill="#b02a47"/>' +
+  '<path d="M-8 -1C-24 -20 -44 -19 -44 -5M8 -1C24 -20 44 -19 44 -5" fill="none" stroke="#f3a3b2" stroke-width="2" stroke-linecap="round" opacity=".6"/><rect x="-8" y="-8" width="16" height="16" rx="5" fill="#8c1733"/>';
 const bow = mk('g', { opacity: 0 }, svg);
-mk('path', { d: 'M-2 3C-10 18 -16 30 -26 42L-17 41L-15 50C-6 36 0 22 3 6Z', fill: '#a8243f' }, bow);
-mk('path', { d: 'M2 3C10 18 16 30 26 42L17 41L15 50C6 36 0 22 -3 6Z', fill: '#c33a56' }, bow);
-mk('path', { d: 'M-4 -2C-22 -30 -56 -26 -52 -3C-48 15 -22 10 -4 3Z', fill: '#c73d58' }, bow);
-mk('path', { d: 'M4 -2C22 -30 56 -26 52 -3C48 15 22 10 4 3Z', fill: '#b02a47' }, bow);
-mk('path', { d: 'M-8 -1C-24 -20 -44 -19 -44 -5M8 -1C24 -20 44 -19 44 -5', fill: 'none', stroke: '#f3a3b2', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .6 }, bow);
-mk('rect', { x: -8, y: -8, width: 16, height: 16, rx: 5, fill: '#8c1733' }, bow);
+bow.innerHTML = BOW_MARKUP;
 
 const heroHead = makeTulip(svg, true);
 
@@ -198,13 +207,77 @@ const ROW_LEFT = ['daisy', 'tulip', 'lavender', 'bells', 'breath', 'cosmos'];
 const ROW_RIGHT = ['carnation', 'bud', 'cosmos', 'tulip', 'daisy', 'lavender'];
 const HEIGHTS = [.86, 1, .8, .94, .78, .9];
 
+/* ================= the heart's geometry: used on screen and again for the wallpaper ================= */
+const heartXY = th => [16 * Math.sin(th) ** 3, -1.1 * (13 * Math.cos(th) - 5 * Math.cos(2 * th) - 2 * Math.cos(3 * th) - Math.cos(4 * th))];   // a touch taller than the textbook heart
+const N_PHOTOS = 20, STEPS = N_PHOTOS / 2;    // one at the dip, nine pairs down the sides, one at the point
+const CURVE = (() => {
+  const N = 600, pts = [], cum = [0];
+  for (let i = 0; i <= N; i++) { pts.push(heartXY(Math.PI * i / N)); if (i) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); }
+  let minY = Infinity, maxY = -Infinity;
+  for (const p of pts) { minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); }
+  return { pts, cum, half: cum[N], minY, maxY };
+})();
+function heartGeo(W, H, { top, availH }) {
+  const { pts, cum, half, minY, maxY } = CURVE, wide = W > H;
+  const step = half / STEPS;
+  const tileU = step * 1.02, tileHU = tileU * 1.17;          // edge to edge: twenty photos draw the outline on their own
+  const u = Math.min((W - (wide ? 40 : 14)) / (32 + tileU), availH / (maxY - minY + tileHU));
+  const hx = W / 2, hy = top + (tileHU / 2 - minY) * u;
+  const slots = [];
+  for (let k = 0; k <= STEPS; k++) {
+    const s = Math.min(k * step, half - 1e-6);
+    let i = 1; while (cum[i] < s) i++;
+    const f = (s - cum[i - 1]) / (cum[i] - cum[i - 1]);
+    const x = lerp(pts[i - 1][0], pts[i][0], f), y = lerp(pts[i - 1][1], pts[i][1], f);
+    const ang = Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]) / D2R;
+    if (k === 0 || k === STEPS) { slots.push({ x: hx, y: hy + y * u, rot: k ? 2 : -2, k, side: 0 }); continue; }
+    for (const side of [-1, 1]) slots.push({ x: hx + side * x * u, y: hy + y * u, rot: side * (ang - 90) * .12 + side * (k % 2 ? 3.5 : -3), k, side });
+  }
+  const outline = [];
+  for (let i = 0; i < 48; i++) { const [x, y] = heartXY(i / 48 * Math.PI * 2); outline.push([hx + x * u, hy + y * u]); }
+  const bs = 5.4 * u / 90;
+  const bq = { x: hx, base: hy + 4.6 * u, s: bs, tie: hy + 9.4 * u, end: hy + 12.6 * u, side: 3.3 * u, sideBase: hy + 5.8 * u };
+  return { slots, tile: tileU * u, u, hx, hy, bq, fc: [hx, bq.base - 44 * bs], outline, heartBottom: hy + (maxY + tileHU / 2) * u };
+}
+
+/* ================= her name, in petals ================= */
+const NAME = 'Soliha';
+const nameSize = (W, H) => cl(Math.min(W * .19, H * .105), 44, 118);
+/* where the petals settle: the name is set in the page's own italic on a hidden canvas and read back as dots */
+function sampleName(x0, y0, fs, rnd = mulberry(5)) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const font = `italic 430 ${fs}px Fraunces, Georgia, serif`;
+  g.font = font;
+  const w = Math.ceil(g.measureText(NAME).width + fs * .4), h = Math.ceil(fs * 1.5);
+  c.width = w; c.height = h;
+  g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#000';
+  g.fillText(NAME, w / 2, h / 2);
+  const data = g.getImageData(0, 0, w, h).data;
+  let step = Math.max(2.6, fs / 24), pts = [];
+  for (let tries = 0; tries < 4; tries++) {
+    pts = [];
+    for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
+      const jx = x + (rnd() - .5) * step * .5, jy = y + (rnd() - .5) * step * .5;
+      if (data[((jy | 0) * w + (jx | 0)) * 4 + 3] > 120) pts.push([x0 - w / 2 + jx, y0 - h / 2 + jy]);
+    }
+    if (pts.length <= 460) break;
+    step *= 1.15;
+  }
+  let minX = Infinity, maxX = -Infinity;
+  for (const p of pts) { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); }
+  const COLS = ['#b3132b', '#c8102e', '#d8233b', '#a50d24', '#e0283f', '#8f0e22', '#d63a52'];
+  return pts.map(([tx, ty]) => {
+    const f = (tx - minX) / (maxX - minX || 1);
+    return { tx, ty, f, sx: tx + (rnd() - .5) * 900, sy: -40 - rnd() * 500, s: step * (.62 + rnd() * .3), rot: rnd() * 6.3, spin: (rnd() - .5) * 8,
+      flip: rnd() * 6.3, col: COLS[(rnd() * COLS.length) | 0], ph: rnd() * 6.3, lead: rnd() * .35, sw: (rnd() - .5) * 160 };
+  });
+}
+
 /* ================= layout ================= */
 let W = 0, H = 0, G = { row: [], slots: [] };
 const heartEl = $('#heart'), stage = $('#stage'), glow = $('#glow'), flash = $('#flash');
 const blobs = [...document.querySelectorAll('.blob')], splash = $('#splash');
 
-const heartXY = th => [16 * Math.sin(th) ** 3, -1.1 * (13 * Math.cos(th) - 5 * Math.cos(2 * th) - 2 * Math.cos(3 * th) - Math.cos(4 * th))];   // a touch taller than the textbook heart
-const N_PHOTOS = 20, STEPS = N_PHOTOS / 2;    // one at the dip, nine pairs down the sides, one at the point
 
 function layout() {
   W = innerWidth; H = innerHeight;
@@ -239,49 +312,28 @@ function layout() {
   }
   row.sort((a, b) => a.j - b.j || a.side - b.side).forEach((f, q) => { f.q = q; });
 
-  /* the heart of photos: six pairs, big */
-  const N = 600, pts = [], cum = [0];
-  for (let i = 0; i <= N; i++) { pts.push(heartXY(Math.PI * i / N)); if (i) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); }
-  const half = cum[N], step = half / STEPS;
-  let minY = Infinity, maxY = -Infinity;
-  for (const p of pts) { minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); }
-  const tileU = step * 1.02, tileHU = tileU * 1.17;          // edge to edge: twenty photos draw the outline on their own
-  const availH = H * (wide ? .7 : .6);
-  const u = Math.min((W - (wide ? 40 : 14)) / (32 + tileU), availH / (maxY - minY + tileHU));
-  const top = Math.max(H * (wide ? .03 : .065), 16);
-  const hx = W / 2, hy = top + (tileHU / 2 - minY) * u;
-  const slots = [];
-  for (let k = 0; k <= STEPS; k++) {
-    const s = Math.min(k * step, half - 1e-6);
-    let i = 1; while (cum[i] < s) i++;
-    const f = (s - cum[i - 1]) / (cum[i] - cum[i - 1]);
-    const x = lerp(pts[i - 1][0], pts[i][0], f), y = lerp(pts[i - 1][1], pts[i][1], f);
-    const ang = Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]) / D2R;
-    if (k === 0 || k === STEPS) { slots.push({ x: hx, y: hy + y * u, rot: k ? 2 : -2, k, side: 0 }); continue; }
-    for (const side of [-1, 1]) slots.push({ x: hx + side * x * u, y: hy + y * u, rot: side * (ang - 90) * .12 + side * (k % 2 ? 3.5 : -3), k, side });
-  }
-  const tile = tileU * u;
-  heartEl.style.setProperty('--tw', `${tile.toFixed(1)}px`);
-  heartEl.style.transformOrigin = `${hx}px ${hy + 3 * u}px`;
-  const outline = [];
-  for (let i = 0; i < 48; i++) { const [x, y] = heartXY(i / 48 * Math.PI * 2); outline.push([hx + x * u, hy + y * u]); }
-
-  /* the bouquet in the middle of the heart */
-  const bs = 5.4 * u / 90;
-  const bq = { x: hx, base: hy + 4.6 * u, s: bs, tie: hy + 9.4 * u, end: hy + 12.6 * u, side: 3.3 * u, sideBase: hy + 5.8 * u };
-  const fc = [hx, bq.base - 44 * bs];
-
-  const heartBottom = hy + (maxY + tileHU / 2) * u;
+  /* the space under the heart, worked out from the bottom: row, buttons, her name in petals */
+  const fs = nameSize(W, H);
+  const rowTop = ground - rowH * (wide ? .58 : .72) * .98;
+  const below = 10 + fs * 1.12 + 14 + 70 + 6;
+  const hg = heartGeo(W, H, { top: Math.max(H * (wide ? .03 : .06), 16), availH: Math.min(H * (wide ? .7 : .62), rowTop - below - Math.max(H * (wide ? .03 : .06), 16)) });
+  heartEl.style.setProperty('--tw', `${hg.tile.toFixed(1)}px`);
+  heartEl.style.transformOrigin = `${hg.hx}px ${hg.hy + 3 * hg.u}px`;
+  const sayLow = hg.heartBottom + 10;
+  const nameCY = sayLow + fs * .56;
   stage.style.setProperty('--sayTop', `${sayTop}px`);
-  stage.style.setProperty('--sayLow', `${heartBottom + Math.max(14, H * .02)}px`);
-  stage.style.setProperty('--finTop', `${heartBottom + Math.max(14, H * .02) + 54}px`);
+  stage.style.setProperty('--sayLow', `${sayLow}px`);
+  stage.style.setProperty('--finTop', `${sayLow + fs * 1.12 + 14}px`);
+  const tap = $('#tap'), tw = hg.u * 12, th = hg.u * 13;
+  Object.assign(tap.style, { width: `${tw}px`, height: `${th}px`, transform: `translate(${hg.bq.x - tw / 2}px,${hg.bq.base - hg.u * 6.5}px)` });
 
   /* watercolour washes: where they rest */
   const vm = Math.max(W, H);
   const BL = [[.18, .22, .95, '#f4c4cc'], [.86, .72, .85, '#d6e3c6'], [.78, .12, .7, '#f8d8c0']];
   blobs.forEach((b, i) => { const [x, y, s, c] = BL[i]; b.style.width = b.style.height = `${(s * vm).toFixed(0)}px`; b.style.background = `radial-gradient(closest-side,${c},${c}00)`; b.dataset.x = x * W - s * vm / 2; b.dataset.y = y * H - s * vm / 2; });
 
-  G = { ground, rowH, R, headBase, row, slots, tile, u, hx, hy, bq, fc, outline, m, L };
+  G = { ground, rowH, R, headBase, row, ...hg, m, L, wide, fs, nameCY };
+  G.name = sampleName(W / 2, nameCY, fs);
   fxSize();
   seedParticles();
 }
@@ -295,7 +347,7 @@ const tiles = PHOTOS.map((name, i) => {
   const img = new Image(); img.alt = ''; img.decoding = 'async';
   b.appendChild(img); heartEl.appendChild(b);
   b.style.zIndex = i;
-  return { b, img, name, src: `assets/img/${name}.webp?v=2`, big: `assets/img/${name}-big.webp?v=2`, spin: (i % 2 ? 1 : -1) * (120 + (i * 37) % 140), vis: -1 };
+  return { b, img, name, src: `assets/img/${name}.webp?v=2`, big: `assets/img/${name}-big.webp?v=2`, spin: (i % 2 ? 1 : -1) * (120 + (i * 37) % 140), vis: -1, z: ((i * 7) % 5) * 9 };
 });
 
 /* An image is only handed to a tile once it has really arrived; until then it keeps trying, quietly. */
@@ -333,13 +385,14 @@ function seedParticles() {
   G.outline.forEach(([x, y], i) => sparks.push({ t0: WHOLE + (i % 6) * .02, x, y, a: r() * 6.3, d: (10 + r() * 28) * sc, gold: true, big: 1 }));
   ripples = [];
 }
-function petal(x, y, s, a, flip, col, alpha) {
-  cx.save(); cx.translate(x, y); cx.rotate(a); cx.scale(1, .18 + .82 * Math.abs(Math.cos(flip)));
-  cx.globalAlpha = alpha; cx.fillStyle = col;
-  cx.beginPath(); cx.moveTo(0, -s); cx.bezierCurveTo(s * .95, -s * .55, s * .7, s * .85, 0, s); cx.bezierCurveTo(-s * .7, s * .85, -s * .95, -s * .55, 0, -s); cx.fill();
-  cx.globalAlpha = alpha * .35; cx.fillStyle = '#fff'; cx.beginPath(); cx.ellipse(-s * .2, -s * .25, s * .18, s * .45, -.3, 0, 6.3); cx.fill();
-  cx.restore();
+function petalOn(g, x, y, s, a, flip, col, alpha) {
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(1, .18 + .82 * Math.abs(Math.cos(flip)));
+  g.globalAlpha = alpha; g.fillStyle = col;
+  g.beginPath(); g.moveTo(0, -s); g.bezierCurveTo(s * .95, -s * .55, s * .7, s * .85, 0, s); g.bezierCurveTo(-s * .7, s * .85, -s * .95, -s * .55, 0, -s); g.fill();
+  g.globalAlpha = alpha * .35; g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-s * .2, -s * .25, s * .18, s * .45, -.3, 0, 6.3); g.fill();
+  g.restore();
 }
+const petal = (...a) => petalOn(cx, ...a);
 function star(x, y, r, col, alpha) {
   cx.globalAlpha = alpha; cx.fillStyle = col;
   cx.beginPath(); cx.moveTo(x, y - r * 2.4); cx.lineTo(x + r * .6, y); cx.lineTo(x, y + r * 2.4); cx.lineTo(x - r * .6, y); cx.closePath(); cx.fill();
@@ -353,6 +406,8 @@ const penRnd = mulberry(7);
 function drawFx(t, now, flower, trails) {
   cx.setTransform(DPR, 0, 0, DPR, 0, 0);
   cx.clearRect(0, 0, W, H);
+  const lean = (k, ky = k) => cx.setTransform(DPR, 0, 0, DPR, DPR * tiltX * k, DPR * tiltY * ky);
+  lean(4, 3);
   const [ox, oy] = G.fc;
   const sc = G.m / 420;
 
@@ -382,6 +437,7 @@ function drawFx(t, now, flower, trails) {
   }
 
   /* the drop: the tulip bursts; then petals keep falling */
+  lean(18, 13);
   const K = 2.3, g = 270 * sc;
   for (const p of bursts) {
     const dt = t - p.t0; if (dt < 0 || dt > p.life + 1) continue;
@@ -400,7 +456,31 @@ function drawFx(t, now, flower, trails) {
     }
   }
 
+  /* a touch on the tulips */
+  for (const pf of puffs) {
+    const dt = t - pf.t0; if (dt < 0 || dt > 2.6) continue;
+    const e = (1 - Math.exp(-K * dt)) / K;
+    for (const p of pf.parts) petal(ox + p.vx * e + Math.sin(dt * 2.4 + p.ph) * p.wob, oy + p.vy * e + g * (dt / K - e / K), p.s, p.a0 + p.spin * dt, p.ph + p.flip * dt, p.col, cl(2.6 - dt) * cl(dt * 14));
+  }
+
+  /* her name: falling petals are caught one by one, left to right, as if written; a glint runs along it, and it beats with the heart */
+  lean(12, 9);
+  const N0 = bar(13);
+  if (t > N0 - 1) for (const n of G.name) {
+    const ts = N0 - .65 + n.lead, ta = N0 + .35 + n.f * 1.25 + n.lead * .4;
+    if (t < ts) continue;
+    const q = span(t, ts, ta), e = eio(q);
+    let x = lerp(cl(n.sx, -40, W + 40), n.tx, e) + Math.sin(Math.PI * e) * n.sw * (1 - e);
+    let y = lerp(n.sy, n.ty, e);
+    let s = n.s;
+    if (q >= 1) { x += Math.sin(t * 1.6 + n.ph) * .5; y += Math.cos(t * 1.3 + n.ph) * .5; s *= 1 + (t < END ? .1 * pulse(t) : .04 * Math.sin(t * 2.2)); }
+    petal(x, y, s, lerp(n.rot + n.spin * 2, n.rot, e), (1 - e) * (n.flip + (t - ts) * 4), n.col, cl((t - ts) / .3));
+    const gl = t - (bar(14) + n.f * .7);
+    if (gl > 0 && gl < .32 && n.lead < .12) star(x, y, 1.8 * (1 - gl / .32) + .4, '#f6d27a', 1 - gl / .32);
+  }
+
   /* photos leave a short glittering wake */
+  lean(14, 10);
   for (const tr of trails) for (let j = 0; j < tr.length; j++) star(tr[j][0], tr[j][1], 1.6 * (1 - j / tr.length) + .3, j % 2 ? '#fff' : '#f0c56a', .75 * (1 - j / tr.length));
 
   /* sparks where each photo lands, and around the whole heart when it closes */
@@ -411,6 +491,7 @@ function drawFx(t, now, flower, trails) {
   }
 
   /* the nib's sparks (real time, not song time: they are only decoration) */
+  lean(9, 7);
   const dt = Math.min(.05, Math.max(0, (now - lastNow) / 1000)); lastNow = now;
   for (const pn of pens) {
     if (t < pn.a || t > pn.b || !pn.el.isConnected) continue;
@@ -471,7 +552,8 @@ function render(t, now) {
   const swell = 1 + (t >= bar(3) && t < bar(4) ? .1 * eio(span(t, bar(3), bar(4))) + .035 * pulse(t) : t >= bar(4) && t < bar(5) ? .1 * (1 - span(t, bar(4), bar(4) + .6)) : 0);
   const open = t < bar(4) ? 0 : BLOOM.reduce((a, b) => a + .19 * eo(span(t, b, b + .5)), 0) + (t > WHOLE ? .06 * pulse(t) : 0);
   let punch = 1;
-  if (t >= DROP) punch += .3 * Math.exp(-(t - DROP) / .16) + (t >= WHOLE ? .2 * Math.exp(-(t - WHOLE) / .2) : 0) + .04 * pulse(t);
+  const touch = puffs.reduce((a, p) => a + (t >= p.t0 ? .2 * Math.exp(-(t - p.t0) / .18) : 0), 0);
+  if (t >= DROP) punch += .3 * Math.exp(-(t - DROP) / .16) + (t >= WHOLE ? .2 * Math.exp(-(t - WHOLE) / .2) : 0) + .04 * pulse(t) + touch;
   shapeTulip(heroHead, open, color, draw);
   heroHead.g.setAttribute('transform', `translate(${f2(hx)} ${f2(hy)}) rotate(${f2(sway(0, 1.6))}) scale(${(hk * swell * punch).toFixed(4)})`);
   heroHead.g.setAttribute('opacity', t < 1.8 ? 0 : 1);
@@ -483,7 +565,7 @@ function render(t, now) {
   bqBack.setAttribute('opacity', t >= WHOLE - .05 ? 1 : 0);
   bow.setAttribute('opacity', t >= WHOLE ? cl((t - WHOLE - .35) * 4) : 0);
   if (t >= WHOLE - .05) {
-    const k = bq.s, hb = 1 + .035 * pulse(t);
+    const k = bq.s, hb = 1 + .035 * pulse(t) + touch * .8;
     bqStems.forEach((e, i) => {
       const sx = i === 1 ? bq.x : bq.x + (i - 1) * bq.side, sy = i === 1 ? bq.base : bq.sideBase;
       e.setAttribute('d', `M${f2(sx)} ${f2(sy)}Q${f2(lerp(sx, bq.x, .6))} ${f2(lerp(sy, bq.tie, .5))} ${f2(bq.x + (i - 1) * 2)} ${f2(bq.tie)}L${f2(bq.x + (i - 1) * G.u * 1.3)} ${f2(bq.end)}`);
@@ -514,7 +596,7 @@ function render(t, now) {
     const c = t >= WHOLE ? 1 : eo(span(t, beatAt(24) + .25 + f.j * .28, beatAt(24) + 1.05 + f.j * .28));
     const bowP = t >= WHOLE ? 0 : eio(lifting);
     const vis = t < RISE ? 1 : t < WHOLE ? 1 - bowP : back;
-    const grow = t >= WHOLE ? lerp(.45, .72, back) : 1;
+    const grow = t >= WHOLE ? lerp(.45, G.wide ? .58 : .72, back) : 1;
     f.g.setAttribute('transform', `translate(${f.x} ${ground}) rotate(${f2(sway(f.x * .01, 2.4) + f.side * 14 * bowP)}) scale(${(f.k * grow).toFixed(4)})`);
     f.g.setAttribute('opacity', (fdraw <= 0 && t < WHOLE ? 0 : vis * (t >= WHOLE ? .92 : 1)).toFixed(3));
     const shown = t >= WHOLE ? 1 : fdraw;
@@ -526,11 +608,15 @@ function render(t, now) {
     if (t < WHOLE) pens.push({ el: f.parts[0].e, a: st, b: st + 1.1, ease: eio });
   }
 
+  /* --- tilt: far things move least, the photos turn in 3D, petals drift the most --- */
+  tiltX += (tiltTX - tiltX) * .1; tiltY += (tiltTY - tiltY) * .1;
+  svg.style.transform = `translate3d(${f2(tiltX * 9)}px,${f2(tiltY * 7)}px,0)`;
+
   /* --- the room --- */
   /* watercolour washes drift all the time, warm up as the tulip turns red, and gather behind the heart */
   const warm = t < bar(4) ? .55 : t < DROP ? .55 + .35 * span(t, bar(4), bar(5)) : .8;
   blobs.forEach((b, i) => {
-    const dx = Math.sin(t * .11 + i * 2) * 40, dy = Math.cos(t * .09 + i) * 30, sc2 = 1 + .06 * Math.sin(t * .2 + i) + (t >= DROP ? .05 * pulse(t) : 0);
+    const dx = Math.sin(t * .11 + i * 2) * 40 - tiltX * (26 + i * 10), dy = Math.cos(t * .09 + i) * 30 - tiltY * (20 + i * 8), sc2 = 1 + .06 * Math.sin(t * .2 + i) + (t >= DROP ? .05 * pulse(t) : 0);
     b.style.transform = `translate(${(+b.dataset.x + dx).toFixed(1)}px,${(+b.dataset.y + dy).toFixed(1)}px) scale(${sc2.toFixed(3)})`;
     b.style.opacity = (warm * (t < .4 ? t / .4 : 1)).toFixed(3);
   });
@@ -553,7 +639,7 @@ function render(t, now) {
   glow.style.width = glow.style.height = `${gs.toFixed(1)}px`;
 
   /* --- the heart: photos leave the tulip in pairs, one pair every half beat, and close on the downbeat --- */
-  heartEl.style.transform = `scale(${(t >= DROP ? 1 + (t >= WHOLE ? .04 : .015) * pulse(t) : 1).toFixed(4)})`;
+  heartEl.style.transform = `perspective(1100px) translate3d(${f2(tiltX * 14)}px,${f2(tiltY * 10)}px,0) rotateY(${f2(tiltX * 10)}deg) rotateX(${f2(-tiltY * 8)}deg) scale(${(t >= DROP ? 1 + (t >= WHOLE ? .04 : .015) * pulse(t) : 1).toFixed(4)})`;
   const trails = [];
   const [sx, sy] = G.fc;
   tiles.forEach((tl, i) => {
@@ -572,7 +658,7 @@ function render(t, now) {
     const [x, y] = pos(p);
     if (p < 1) { const tr = []; for (let j = 1; j <= 7; j++) { const q = p - j * .035; if (q > 0) tr.push(pos(q)); } trails.push(tr); }
     const scl = lerp(.15, 1, eback(p)), rot = lerp(tl.spin, slot.rot, eo(p));
-    tl.b.style.transform = `translate3d(${(x - G.tile / 2).toFixed(1)}px,${(y - G.tile * 1.17 / 2).toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg) scale(${scl.toFixed(3)})`;
+    tl.b.style.transform = `translate3d(${(x - G.tile / 2).toFixed(1)}px,${(y - G.tile * 1.17 / 2).toFixed(1)}px,${tl.z * p}px) rotate(${rot.toFixed(2)}deg) scale(${scl.toFixed(3)})`;
     if (tl.vis !== 1) { tl.b.style.opacity = 1; tl.vis = 1; }
     /* a gleam runs across the photos, left to right, when the heart closes */
     const g0 = WHOLE + .05 + (slot.x / W) * .45, gp = span(t, g0, g0 + .85);
@@ -580,12 +666,41 @@ function render(t, now) {
     if (tl.gleam !== gv) { tl.gleam = gv; tl.b.style.setProperty('--sh', gv); }
   });
 
-  /* --- words --- */
+  /* --- words: each one rises out of a blur on its own sixteenth, and leaves with its sentence --- */
   for (const c of cues) {
-    const on = t >= c.a && t < c.b;
-    if (on !== c.on) { c.on = on; c.el.classList.toggle('on', on); }
+    const active = t >= c.a - .05 && t < c.b + .6;
+    if (!active && !c.dirty) continue;
+    c.dirty = active;
+    for (const w of c.words) {
+      const pin = t < c.a ? 0 : eo(span(t, c.a + w.i * c.st, c.a + w.i * c.st + .75));
+      const pout = c.b === Infinity ? 0 : span(t, c.b, c.b + .45);
+      const v = pin * (1 - pout);
+      const key = Math.round(v * 60) * 100 + Math.round(pin * 40);
+      if (w.k === key) continue;
+      w.k = key;
+      w.el.style.opacity = v.toFixed(3);
+      w.el.style.filter = v > .985 ? 'none' : `blur(${((1 - pin) * 7 + pout * 4).toFixed(2)}px)`;
+      w.el.style.transform = pin > .995 ? 'none' : `translate3d(0,${((1 - pin) * .42).toFixed(3)}em,0)`;
+    }
   }
+  buzz(t);
   drawFx(t, now, flower, trails);
+}
+
+/* Android lets a page vibrate after a tap: a jolt on the drop, a double knock when the heart closes, then lub-dub on every beat */
+const canBuzz = typeof navigator.vibrate === 'function' && !RENDER;
+let buzzT = -1, buzzBeat = -1;
+function buzz(t) {
+  const prev = buzzT; buzzT = t;
+  if (!canBuzz || !wantSound || mode !== 'song' || t < prev || t - prev > .3) return;
+  try {
+    if (prev < DROP && t >= DROP) navigator.vibrate(90);
+    else if (prev < WHOLE && t >= WHOLE) navigator.vibrate([55, 70, 95]);
+    else if (t > WHOLE + .3 && t < END - 1) {
+      const k = Math.floor((t - B0) / BEAT);
+      if (k !== buzzBeat && t - beatAt(k) < .09) { buzzBeat = k; navigator.vibrate(((k - 2) % 4 + 4) % 4 === 0 ? [34, 120, 20] : [20, 120, 12]); }
+    }
+  } catch (e) {}
 }
 
 /* rings: the bloom's four beats, the drop, the heart closing */
@@ -599,10 +714,11 @@ function seedRipples() {
   ];
 }
 
-/* words arrive one by one, an eighth or a sixteenth apart */
+/* words arrive one by one, an eighth or a sixteenth apart; render() moves them */
 const cues = [];
 document.querySelectorAll('[data-in]').forEach(el => {
   let i = 0;
+  const words = [];
   const walk = n => {
     for (const c of [...n.childNodes]) {
       if (c.nodeType === 3) {
@@ -610,28 +726,27 @@ document.querySelectorAll('[data-in]').forEach(el => {
         for (const part of c.textContent.split(/(\s+)/)) {
           if (!part) continue;
           if (/^\s+$/.test(part)) { frag.append(' '); continue; }
-          const w = document.createElement('span'); w.className = 'w'; w.textContent = part; w.style.setProperty('--i', i++); frag.append(w);
+          const w = document.createElement('span'); w.className = 'w'; w.textContent = part; words.push({ el: w, i: i++ }); frag.append(w);
         }
         c.replaceWith(frag);
       } else if (c.nodeType === 1 && !c.hasAttribute('data-in')) walk(c);
     }
   };
   walk(el);
-  el.style.setProperty('--st', `${i <= 5 ? HB / 2 : HB / 4}s`);   // a whole line is in place within about a second
+  const st = i <= 5 ? HB / 2 : HB / 4;      // a whole line is in place within about a second
   /* a part of a sentence leaves with its sentence */
   const parent = cues.find(c => c.el.contains(el));
   const b = el.dataset.out ? timeOf(el.dataset.out, true) : Infinity;
-  cues.push({ el, a: timeOf(el.dataset.in), b: parent ? Math.min(b, parent.b) : b, on: false });
+  cues.push({ el, words, st, a: timeOf(el.dataset.in), b: parent ? Math.min(b, parent.b) : b, dirty: true });
 });
 
-/* ================= the day counter: the real flower wilts, this one keeps count ================= */
+/* ================= coming back: the gate notices ================= */
 let day = 1;
 try {
   const k = 'gul-ochilgan', first = localStorage.getItem(k);
   if (first) day = Math.max(1, Math.floor((Date.now() - +first) / 864e5) + 1);
   else localStorage.setItem(k, String(Date.now()));
 } catch (e) { /* private mode: it is simply day one */ }
-$('#count').querySelectorAll('.w').forEach((w, i, all) => { if (i === all.length - 1) w.textContent = `${day}-kun`; });
 if (day > 1) $('#tagKicker').textContent = 'Bu gul hali ham so‘limagan';
 
 /* ================= clock ================= */
@@ -651,10 +766,13 @@ function clock(now) {
   return 0;
 }
 const fin = $('#fin');
+const tapEl = $('#tap');
+let tapLive = false;
 function frame(now) {
   const t = clock(now);
-  render(t, now);
-  if (t >= END && !finished) { finished = true; fin.classList.add('show'); stage.classList.add('done'); }
+  render(t, RENDER ? t * 1000 : now);
+  if (t >= WHOLE !== tapLive) { tapLive = t >= WHOLE; tapEl.classList.toggle('live', tapLive); }
+  if (t >= END && !finished) { finished = true; fin.classList.add('show'); stage.classList.add('done'); if (!RENDER) setTimeout(prepWallpaper, 700); }
   requestAnimationFrame(frame);
 }
 
@@ -681,7 +799,7 @@ function play(from) {
   song.volume = 1;
   const p = song.play();
   mode = 'song'; vt = from || 0; lastCT = -1;
-  if (p && p.catch) p.catch(() => { if (song.paused) { mode = 'free'; freeBase = vt; freeAt = performance.now(); } });
+  if (p && p.catch) p.catch(() => { if (song.paused) resume.hidden = false; });   // the film waits for the song
 }
 /* If the song stops on its own mid-film, start it again; if the phone refuses without a tap, ask for one. */
 const resume = $('#resume');
@@ -689,7 +807,13 @@ setInterval(() => {
   if (!wantSound || mode !== 'song' || finished || document.hidden) return;
   if (song.paused && !song.ended) song.play().then(() => { resume.hidden = true; }).catch(() => { resume.hidden = false; });
 }, 1000);
-resume.addEventListener('click', () => { song.play().then(() => { resume.hidden = true; }).catch(() => {}); });
+let resumeFails = 0;
+resume.addEventListener('click', () => {
+  song.play().then(() => { resume.hidden = true; }).catch(() => {
+    /* twice refused even with a tap: the sound itself is broken, so let the film run without it */
+    if (++resumeFails >= 2) { mode = 'free'; freeBase = vt; freeAt = performance.now(); resume.hidden = true; }
+  });
+});
 document.addEventListener('visibilitychange', () => { if (!document.hidden && wantSound && mode === 'song' && song.paused && !finished) song.play().catch(() => { resume.hidden = false; }); });
 
 /* ================= gate ================= */
@@ -712,15 +836,56 @@ async function prepare() {
   msg.textContent = 'Lentani yechish uchun bosing';
   bowBtn.disabled = false;
 }
+let started = false, asking = false;
+const askMotion = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+function onGateTap() {
+  if (bowBtn.disabled || started || asking) return;
+  if (!askMotion) { listenTilt(); openGate(); return; }
+  asking = true;
+  let perm;
+  try { perm = DeviceOrientationEvent.requestPermission(); } catch (e) { perm = Promise.resolve('denied'); }
+  /* the song is started and stopped inside this same tap, so the phone lets it play once the question is answered */
+  try { const p = song.play(); if (p && p.then) p.then(() => { if (!started) { song.pause(); try { song.currentTime = 0; } catch (e) {} } }, () => {}); } catch (e) {}
+  Promise.resolve(perm).then(r => { if (r === 'granted') listenTilt(); }, () => {}).then(() => { asking = false; openGate(); });
+}
 function openGate() {
-  if (gate.classList.contains('open')) return;
+  if (started) return;
+  started = true;
   play(0);
   gate.classList.add('open');
   setTimeout(() => gate.classList.add('gone'), 2200);
   tiles.forEach(tl => { const i = new Image(); i.src = tl.big; });      // the larger versions, for later
 }
-bowBtn.addEventListener('click', openGate);
-gate.addEventListener('click', e => { if (!bowBtn.disabled && e.target !== bowBtn && !bowBtn.contains(e.target)) openGate(); });
+bowBtn.addEventListener('click', onGateTap);
+gate.addEventListener('click', e => { if (e.target !== bowBtn && !bowBtn.contains(e.target)) onGateTap(); });
+
+/* ================= tilt ================= */
+let tilting = false, rest = null;
+function onOrient(e) {
+  if (e.beta == null || e.gamma == null) return;
+  const a = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  let x = e.gamma, y = e.beta;
+  if (a === 90) { x = e.beta; y = -e.gamma; } else if (a === -90 || a === 270) { x = -e.beta; y = e.gamma; } else if (a === 180) { x = -e.gamma; y = -e.beta; }
+  if (!rest) rest = [x, y];
+  rest[0] += (x - rest[0]) * .005; rest[1] += (y - rest[1]) * .005;    // however she holds it becomes, slowly, the middle
+  tiltTX = cl((x - rest[0]) / 20, -1, 1); tiltTY = cl((y - rest[1]) / 20, -1, 1);
+}
+function listenTilt() { if (tilting || RENDER) return; tilting = true; addEventListener('deviceorientation', onOrient); }
+if (!RENDER && matchMedia('(hover: hover) and (pointer: fine)').matches)
+  addEventListener('pointermove', e => { tiltTX = (e.clientX / W - .5) * 1.1; tiltTY = (e.clientY / H - .5) * 1.1; });
+
+/* ================= the tulips answer a touch ================= */
+tapEl.querySelector('input').addEventListener('change', () => {
+  const t = clock(performance.now());
+  if (t < WHOLE) return;
+  const r = mulberry(100 + puffs.length), sc = G.m / 420;
+  puffs.push({ t0: t, parts: Array.from({ length: 28 }, () => {
+    const a = r() * 6.3, v = (180 + r() * 440) * sc;
+    return { vx: Math.cos(a) * v, vy: Math.sin(a) * v - 140 * sc, s: (4 + r() * 6) * Math.max(.8, sc), a0: r() * 6.3, spin: (r() - .5) * 8, flip: 2 + r() * 4, ph: r() * 6.3, wob: 6 + r() * 14, col: PETAL_COLS[(r() * PETAL_COLS.length) | 0] };
+  }) });
+  if (puffs.length > 10) puffs.shift();
+  if (canBuzz) try { navigator.vibrate([18, 60, 12]); } catch (e) {}
+});
 
 $('#again').addEventListener('click', () => {
   finished = false; fin.classList.remove('show'); stage.classList.remove('done');
@@ -737,10 +902,87 @@ tiles.forEach(tl => tl.b.addEventListener('click', () => {
 }));
 lb.addEventListener('click', () => { lb.classList.remove('on'); setTimeout(() => { lb.hidden = true; }, 400); });
 
+/* ================= a wallpaper for her phone ================= */
+/* Drawn on her own phone from the photos it has already loaded: the heart, the bouquet and her name in petals, sized for an iPhone screen. */
+function tulipMarkup(o) {
+  const P = (tr, w, h, tip, fill) => `<g transform="${tr}"><path d="${petalD(w, h, tip)}" fill="url(#${fill})" stroke="#4a1018" stroke-width="1.15" stroke-linejoin="round"/></g>`;
+  let stam = '';
+  for (const [x, y] of [[-9, -38], [-4, -44], [3, -45], [9, -39], [0, -33]])
+    stam += `<path d="M0 -6Q${x * .4} ${y * .5} ${x} ${y}" fill="none" stroke="#3a2a1a" stroke-width="1.1"/><path d="${ell(x, y - 2.5, 1.6, 3.4, x * 2)}" fill="#2a1a12"/>`;
+  return P(`translate(-3 0) rotate(${-12 - 10 * o})`, 17, 80, 1.1, 'tIn') + P(`translate(3 0) rotate(${12 + 10 * o})`, 17, 80, 1.1, 'tIn') + P('', 16, 86, 1.12, 'tIn') +
+    `<g opacity="${cl(o * 1.6 - .4)}">${stam}</g>` +
+    P(`translate(-6 0) rotate(${-7 - 33 * o})`, 22, 80, 1.07, 'tOut') + P(`translate(6 0) rotate(${7 + 33 * o})`, 22, 80, 1.07, 'tOut') +
+    `<g transform="scale(${1 + .05 * o} ${1 - .24 * o})"><path d="${petalD(21, 77, 1.05)}" fill="url(#tFront)" stroke="#4a1018" stroke-width="1.15" stroke-linejoin="round"/>` +
+    `<path d="M0 -6C-2 -30 -1 -55 0 -72" fill="none" stroke="#ffb3bb" stroke-width="1.3" stroke-linecap="round" opacity=".55"/></g>`;
+}
+function bouquetSVG(W, H, { bq, u }) {
+  const k = bq.s, lk = u * 7.5 / 172;
+  const stems = [-1, 0, 1].map(i => {
+    const sx = i ? bq.x + i * bq.side : bq.x, sy = i ? bq.sideBase : bq.base;
+    return `<path d="M${sx} ${sy}Q${lerp(sx, bq.x, .6)} ${lerp(sy, bq.tie, .5)} ${bq.x + i * 2} ${bq.tie}L${bq.x + i * u * 1.3} ${bq.end}" fill="none" stroke="${STEM}" stroke-width="${Math.max(1.4, u * .24)}" stroke-linecap="round"/>`;
+  }).join('');
+  const leaves = [-1, 1].map(sd => `<path transform="translate(${bq.x + sd * 2} ${bq.end}) rotate(${sd * 26}) scale(${-sd * lk} ${lk})" d="${TLEAF}" fill="url(#lf)" stroke="#3a4a30" stroke-width="1.4"/>`).join('');
+  const sides = [-1, 1].map(sd => `<g transform="translate(${bq.x + sd * bq.side} ${bq.sideBase}) rotate(${sd * 19}) scale(${k * .82})">${tulipMarkup(.45)}</g>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${GRADS}</defs>${stems}${leaves}${sides}` +
+    `<g transform="translate(${bq.x} ${bq.tie}) scale(${u * .045})">${BOW_MARKUP}</g><g transform="translate(${bq.x} ${bq.base}) scale(${k})">${tulipMarkup(.76)}</g></svg>`;
+}
+const loadImage = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+async function makeWallpaper() {
+  const LW = 390, LH = 844, S = 3;
+  const c = document.createElement('canvas'); c.width = LW * S; c.height = LH * S;
+  const g = c.getContext('2d'); g.scale(S, S);
+  const bg = g.createLinearGradient(0, 0, 0, LH);
+  bg.addColorStop(0, '#f6dadb'); bg.addColorStop(.5, '#f8efe6'); bg.addColorStop(1, '#e4ecd8');
+  g.fillStyle = bg; g.fillRect(0, 0, LW, LH);
+  for (const [x, y, r, col, a] of [[.15, .3, .8, '244,190,200', .75], [.92, .78, .7, '208,224,190', .8], [.82, .1, .55, '248,212,186', .7]]) {
+    const rg = g.createRadialGradient(x * LW, y * LH, 0, x * LW, y * LH, r * LH * .5);
+    rg.addColorStop(0, `rgba(${col},${a})`); rg.addColorStop(1, `rgba(${col},0)`); g.fillStyle = rg; g.fillRect(0, 0, LW, LH);
+  }
+  const hg = heartGeo(LW, LH, { top: LH * .25, availH: LH * .47 });     // below where the lock-screen clock sits
+  const gl = g.createRadialGradient(hg.fc[0], hg.fc[1], 0, hg.fc[0], hg.fc[1], hg.u * 15);
+  gl.addColorStop(0, 'rgba(246,160,178,.65)'); gl.addColorStop(1, 'rgba(246,170,186,0)'); g.fillStyle = gl; g.fillRect(0, 0, LW, LH);
+  const T = hg.tile, TH = T * 1.17;
+  tiles.forEach((tl, i) => {
+    const sl = hg.slots[i];
+    g.save(); g.translate(sl.x, sl.y); g.rotate(sl.rot * D2R);
+    g.shadowColor = 'rgba(70,25,35,.38)'; g.shadowBlur = 7; g.shadowOffsetY = 3.5;
+    g.fillStyle = '#fffdf8'; g.fillRect(-T / 2, -TH / 2, T, TH);
+    g.shadowColor = 'transparent';
+    if (tl.img.naturalWidth) g.drawImage(tl.img, -T / 2 + T * .06, -TH / 2 + TH * .052, T * .88, TH * .755);
+    g.restore();
+  });
+  const bqImg = await loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(bouquetSVG(LW, LH, hg)));
+  g.drawImage(bqImg, 0, 0, LW, LH);
+  const fs = 62, ny = hg.heartBottom + 14 + fs * .56;
+  for (const n of sampleName(LW / 2, ny, fs, mulberry(9))) petalOn(g, n.tx, n.ty, n.s, n.rot, 0, n.col, 1);
+  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('toBlob')), 'image/jpeg', .92));
+}
+let wpBlob = null, wpURL = null, wpJob = null;
+function prepWallpaper() {
+  if (!wpJob) wpJob = makeWallpaper().then(b => { wpBlob = b; wpURL = URL.createObjectURL(b); }).catch(e => { wpJob = null; throw e; });
+  return wpJob;
+}
+const wp = $('#wp');
+$('#keep').addEventListener('click', () => {
+  prepWallpaper().then(() => {
+    wp.querySelector('img').src = wpURL;
+    wp.hidden = false; requestAnimationFrame(() => wp.classList.add('on'));
+  }).catch(() => {});
+});
+/* the share sheet is how an iPhone saves an image to Photos; elsewhere, a plain download */
+$('#wpSave').addEventListener('click', () => {
+  if (!wpBlob) return;
+  const file = new File([wpBlob], 'bir-dona-gul.jpg', { type: 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file] }).catch(() => {}); return; }
+  const a = document.createElement('a'); a.href = wpURL; a.download = 'bir-dona-gul.jpg'; document.body.appendChild(a); a.click(); a.remove();
+});
+$('#wpClose').addEventListener('click', () => { wp.classList.remove('on'); setTimeout(() => { wp.hidden = true; }, 400); });
+
 /* ================= go ================= */
 let rz;
 addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { layout(); seedRipples(); }, 120); });
 layout(); seedRipples();
+document.fonts.load('italic 430 80px Fraunces').then(() => { G.name = sampleName(W / 2, G.nameCY, G.fs); }).catch(() => {});
 if (AT != null) {
   gate.classList.add('gone');
   tiles.forEach(tl => fetchImg(tl.src).then(src => { tl.img.src = src; tl.img.classList.add('ok'); }));
@@ -748,5 +990,5 @@ if (AT != null) {
   if (AT >= END) { finished = true; fin.classList.add('show'); stage.classList.add('done'); }
 } else prepare();
 requestAnimationFrame(function first(now) { lastNow = now; frame(now); });
-window.__gul = { get G() { return G; }, get t() { return clock(performance.now()); }, get mode() { return mode; }, freeze(t) { mode = 'frozen'; freeBase = t; }, DROP, WHOLE, END, bar, beatAt };
+window.__gul = { prepWallpaper, get wpBlob() { return wpBlob; }, get G() { return G; }, get t() { return clock(performance.now()); }, get mode() { return mode; }, freeze(t) { mode = 'frozen'; freeBase = t; }, DROP, WHOLE, END, bar, beatAt };
 })();
