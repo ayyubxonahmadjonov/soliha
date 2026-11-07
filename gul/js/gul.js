@@ -204,7 +204,7 @@ const heartEl = $('#heart'), stage = $('#stage'), glow = $('#glow'), flash = $('
 const blobs = [...document.querySelectorAll('.blob')], splash = $('#splash');
 
 const heartXY = th => [16 * Math.sin(th) ** 3, -1.1 * (13 * Math.cos(th) - 5 * Math.cos(2 * th) - 2 * Math.cos(3 * th) - Math.cos(4 * th))];   // a touch taller than the textbook heart
-const PAIRS = 6;
+const N_PHOTOS = 20, STEPS = N_PHOTOS / 2;    // one at the dip, nine pairs down the sides, one at the point
 
 function layout() {
   W = innerWidth; H = innerHeight;
@@ -242,21 +242,22 @@ function layout() {
   /* the heart of photos: six pairs, big */
   const N = 600, pts = [], cum = [0];
   for (let i = 0; i <= N; i++) { pts.push(heartXY(Math.PI * i / N)); if (i) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); }
-  const half = cum[N], step = half / PAIRS;
+  const half = cum[N], step = half / STEPS;
   let minY = Infinity, maxY = -Infinity;
   for (const p of pts) { minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); }
-  const tileU = step * .86, tileHU = tileU * 1.17;           // a little air between the photos keeps the outline readable
+  const tileU = step * 1.02, tileHU = tileU * 1.17;          // edge to edge: twenty photos draw the outline on their own
   const availH = H * (wide ? .7 : .6);
   const u = Math.min((W - (wide ? 40 : 14)) / (32 + tileU), availH / (maxY - minY + tileHU));
   const top = Math.max(H * (wide ? .03 : .065), 16);
   const hx = W / 2, hy = top + (tileHU / 2 - minY) * u;
   const slots = [];
-  for (let k = 0; k < PAIRS; k++) {
-    const s = (k + .5) * step;
+  for (let k = 0; k <= STEPS; k++) {
+    const s = Math.min(k * step, half - 1e-6);
     let i = 1; while (cum[i] < s) i++;
     const f = (s - cum[i - 1]) / (cum[i] - cum[i - 1]);
     const x = lerp(pts[i - 1][0], pts[i][0], f), y = lerp(pts[i - 1][1], pts[i][1], f);
     const ang = Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]) / D2R;
+    if (k === 0 || k === STEPS) { slots.push({ x: hx, y: hy + y * u, rot: k ? 2 : -2, k, side: 0 }); continue; }
     for (const side of [-1, 1]) slots.push({ x: hx + side * x * u, y: hy + y * u, rot: side * (ang - 90) * .12 + side * (k % 2 ? 3.5 : -3), k, side });
   }
   const tile = tileU * u;
@@ -286,8 +287,8 @@ function layout() {
 }
 
 /* ================= photos ================= */
-/* left and right of each pair, from the dip at the top down to the point: mostly her with flowers */
-const PHOTOS = ['flowers', 'portrait', 'g6', 'g1', 'g5', 'g2', 'g3', 'cafe', 'g8', 'g4', 'eighteen', 'shades'];
+/* the dip at the top, then left and right down the sides, then the point: every photo with flowers, and the loveliest of the rest between them */
+const PHOTOS = ['portrait', 'g6', 'g1', 'selfie', 'eighteen', 'g5', 'g2', 'eclair', 'headphones', 'g3', 'cafe', 'shades', 'closeup', 'g8', 'g4', 'kart', 'profile', 'hero', 'suit', 'flowers'];
 const tiles = PHOTOS.map((name, i) => {
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'ph'; b.setAttribute('aria-label', 'Rasmni kattalashtirish');
@@ -430,7 +431,8 @@ function drawFx(t, now, flower, trails) {
 }
 
 /* ================= the film ================= */
-const landOf = i => DROP + (Math.floor(i / 2) + 3) * HB;   // the burst first, then a pair every half beat; the last pair closes the heart on the downbeat
+/* after the burst: the dip, then a pair on every sixteenth, and the point last, closing the heart on the downbeat */
+const landOf = i => WHOLE - (STEPS - (i === N_PHOTOS - 1 ? STEPS : Math.floor((i + 1) / 2))) * HB / 2;
 const BLOOM = [18, 19, 20, 21].map(beatAt);                  // the four beats the tulip opens on
 let lastFlower = [0, 0];
 
