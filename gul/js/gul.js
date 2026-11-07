@@ -31,6 +31,7 @@ const D2R = Math.PI / 180;
 const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * p)).join(',')})`; };
+const f2 = v => v.toFixed(2);
 
 /* A heartbeat on every beat: lub, then a softer dub. Downbeats land harder. */
 function pulse(t) {
@@ -38,82 +39,107 @@ function pulse(t) {
   const a = ((k - 2) % 4 + 4) % 4 === 0 ? 1 : .6;
   return a * (Math.exp(-d / .1) + (d > .19 ? .5 * Math.exp(-(d - .19) / .09) : 0));
 }
+/* a softer tick for the quiet half: just the beat, no dub */
+const tick = t => { const d = t - beatAt(Math.floor((t - B0) / BEAT)); return Math.exp(-d / .16); };
 
-const PAPER = '#f8f1e7', INK = '#5a4943', LEAF = '#6f8f5f', LEAF2 = '#4d6a45';
+const PAPER = '#f8f1e7', INK = '#5a4943', LEAF = '#6f8f5f', LEAF2 = '#4d6a45', STEM = '#55744b';
 
-/* ================= svg: the rose and the row of flowers ================= */
+/* ================= svg ================= */
 const NS = 'http://www.w3.org/2000/svg';
 const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
 const ell = (cx, cy, rx, ry, deg = 0) => {
   const a = deg * D2R, dx = rx * Math.cos(a), dy = rx * Math.sin(a);
   return `M${cx - dx} ${cy - dy}A${rx} ${ry} ${deg} 1 0 ${cx + dx} ${cy + dy}A${rx} ${ry} ${deg} 1 0 ${cx - dx} ${cy - dy}Z`;
 };
+const INKED = { stroke: INK, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': '1 1' };
 
 const svg = $('#ink');
 const defs = mk('defs', {}, svg);
-const PETAL_STOPS = [[0, '#6c0f27'], [.3, '#a2203f'], [.62, '#d24a67'], [.86, '#ef8ea2'], [1, '#f9c6ce']];
-const petalGrad = mk('radialGradient', { id: 'pg', gradientUnits: 'userSpaceOnUse', cx: 0, cy: 0, r: 52 }, defs);
-const petalStops = PETAL_STOPS.map(([o, c]) => mk('stop', { offset: o, 'stop-color': PAPER }, petalGrad));
-const leafGrad = mk('linearGradient', { id: 'lg', x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
-const leafStops = [[0, LEAF], [1, LEAF2]].map(([o]) => mk('stop', { offset: o, 'stop-color': PAPER }, leafGrad));
+/* Shared colour ramps: they start as paper and are blended to their colour, so a drawing can turn into a painting. */
+const ramps = [];
+function ramp(id, stops, attrs) {
+  const g = mk('linearGradient', { id, x1: 0, y1: 1, x2: 0, y2: 0, ...attrs }, defs);
+  const els = stops.map(([o]) => mk('stop', { offset: o, 'stop-color': PAPER }, g));
+  ramps.push({ stops, els });
+}
+ramp('tOut', [[0, '#5e0816'], [.32, '#a50f26'], [.72, '#d8233b'], [1, '#f05867']]);
+ramp('tFront', [[0, '#6b0a1b'], [.35, '#bd132c'], [.8, '#e8364b'], [1, '#f7838d']]);
+ramp('tIn', [[0, '#3e040f'], [.55, '#7d0b1e'], [1, '#b81d33']]);
+ramp('lf', [[0, LEAF2], [1, '#86a873']], { x1: 0, y1: 0, x2: 1, y2: 0 });
+let rampC = -1;
+function paint(c) {
+  c = Math.round(c * 200) / 200;
+  if (c === rampC) return;
+  rampC = c;
+  for (const r of ramps) r.stops.forEach(([, col], i) => r.els[i].setAttribute('stop-color', mix(PAPER, col, c)));
+}
 
 const rowG = mk('g', {}, svg);
-const roseAll = mk('g', {}, svg);
-const stem = mk('path', { fill: 'none', stroke: INK, 'stroke-width': 1.7, 'stroke-linecap': 'round', pathLength: 1, 'stroke-dasharray': '1 1' }, roseAll);
-const LEAF_D = 'M0 0C9 -13 30 -17 48 -5C31 6 12 7 0 0Z', RIB_D = 'M2 -1C16 -6 30 -7 45 -5';
-const leaves = [1, -1].map(side => {
-  const g = mk('g', {}, roseAll);
-  mk('path', { d: LEAF_D, fill: 'url(#lg)', stroke: INK, 'stroke-width': 1.1, 'stroke-linejoin': 'round' }, g);
-  mk('path', { d: RIB_D, fill: 'none', stroke: INK, 'stroke-width': .8, opacity: .7 }, g);
+const heroAll = mk('g', {}, svg);                 // the tulip's stem and leaves; its head is drawn separately
+const stem = mk('path', { fill: 'none', 'stroke-width': 1.9, ...INKED }, heroAll);
+const TLEAF = 'M0 0C-14 -10 -27 -42 -25 -82C-23 -122 -10 -152 5 -172C-2 -132 -3 -72 6 -22C5 -13 3 -5 0 0Z';
+const heroLeaves = [1, -1].map(side => {
+  const g = mk('g', {}, heroAll);
+  mk('path', { d: TLEAF, fill: 'url(#lf)', stroke: INK, 'stroke-width': 1.2, 'stroke-linejoin': 'round' }, g);
+  mk('path', { d: 'M1 -6C-6 -60 -4 -120 3 -165', fill: 'none', stroke: INK, 'stroke-width': .8, opacity: .55 }, g);
   return { g, side };
 });
 
-/* The rose is seen from a little above: five rings of petals, opened ring by ring. Local radius is 50. */
-const RINGS = [
-  { n: 3, r0: 0, r1: 13, rot: 10 }, { n: 4, r0: 3, r1: 21, rot: 55 }, { n: 5, r0: 6, r1: 30, rot: 20 },
-  { n: 6, r0: 10, r1: 40, rot: 47 }, { n: 7, r0: 14, r1: 50, rot: 4 }
-];
-const head = mk('g', {}, svg);
-const sepals = mk('g', {}, head);
-for (let i = 0; i < 5; i++) {
-  const g = mk('g', { transform: `rotate(${i * 72 + 36})` }, sepals);
-  mk('path', { d: 'M-9 0C-12 22 -6 44 0 60C6 44 12 22 9 0Z', fill: 'url(#lg)', stroke: INK, 'stroke-width': 1 }, g);
-}
-const petalD = (r0, r1, hw) =>
-  `M0 ${r0}C${-hw * .6} ${r0 + (r1 - r0) * .15} ${-hw * 1.05} ${r1 * .55} ${-hw * .9} ${r1 * .8}` +
-  `C${-hw * .7} ${r1} ${-hw * .25} ${r1 * 1.04} 0 ${r1 * .97}C${hw * .25} ${r1 * 1.04} ${hw * .7} ${r1} ${hw * .9} ${r1 * .8}` +
-  `C${hw * 1.05} ${r1 * .55} ${hw * .6} ${r0 + (r1 - r0) * .15} 0 ${r0}Z`;
-const lipD = (r1, hw) => `M${-hw * .86} ${r1 * .8}C${-hw * .66} ${r1 * .98} ${-hw * .24} ${r1 * 1.02} 0 ${r1 * .95}C${hw * .24} ${r1 * 1.02} ${hw * .66} ${r1 * .98} ${hw * .86} ${r1 * .8}`;
-const ringEls = [];
-const lips = [];
-for (let i = RINGS.length - 1; i >= 0; i--) {
-  const R = RINGS[i], g = mk('g', {}, head), hw = R.r1 * Math.sin(Math.PI / R.n) * 1.28;
-  for (let k = 0; k < R.n; k++) {
-    const p = mk('g', { transform: `rotate(${k * 360 / R.n})` }, g);
-    mk('path', { d: petalD(R.r0, R.r1, hw), fill: 'url(#pg)', stroke: '#5a1a2a', 'stroke-width': 1.05, 'stroke-linejoin': 'round' }, p);
-    lips.push(mk('path', { d: lipD(R.r1, hw), fill: 'none', stroke: '#ffdbe1', 'stroke-width': 1.5, 'stroke-linecap': 'round', opacity: 0 }, p));
+/* A tulip seen from the side. Base at 0,0 where it meets the stem; about 90 tall. Its outer petals lean out as it opens. */
+const petalD = (w, h, tip = 1.08) =>
+  `M0 0C${-w * .95} ${-h * .06} ${-w * 1.14} ${-h * .5} ${-w * .62} ${-h * .87}C${-w * .36} ${-h * 1.01} ${-w * .1} ${-h * tip} 0 ${-h * tip}` +
+  `C${w * .1} ${-h * tip} ${w * .36} ${-h * 1.01} ${w * .62} ${-h * .87}C${w * 1.14} ${-h * .5} ${w * .95} ${-h * .06} 0 0Z`;
+function makeTulip(parent, inked) {
+  const g = mk('g', {}, parent);
+  const strokeA = inked ? INKED : { stroke: '#4a1018', 'stroke-linejoin': 'round' };
+  const P = (w, h, tip, fill) => { const pg = mk('g', {}, g); const e = mk('path', { d: petalD(w, h, tip), fill, 'stroke-width': 1.15, ...strokeA }, pg); return { pg, e }; };
+  const inL = P(17, 80, 1.1, 'url(#tIn)'), inR = P(17, 80, 1.1, 'url(#tIn)'), inC = P(16, 86, 1.12, 'url(#tIn)');
+  const stam = mk('g', { opacity: 0 }, g);
+  for (const [x, y] of [[-9, -38], [-4, -44], [3, -45], [9, -39], [0, -33]]) {
+    mk('path', { d: `M0 -6Q${x * .4} ${y * .5} ${x} ${y}`, fill: 'none', stroke: '#3a2a1a', 'stroke-width': 1.1 }, stam);
+    mk('path', { d: ell(x, y - 2.5, 1.6, 3.4, x * 2), fill: '#2a1a12' }, stam);
   }
-  ringEls[i] = g;
+  const outL = P(22, 80, 1.07, 'url(#tOut)'), outR = P(22, 80, 1.07, 'url(#tOut)'), front = P(21, 77, 1.05, 'url(#tFront)');
+  const vein = mk('path', { d: 'M0 -6C-2 -30 -1 -55 0 -72', fill: 'none', stroke: '#ffb3bb', 'stroke-width': 1.3, 'stroke-linecap': 'round', opacity: 0 }, front.pg);
+  const sheen = mk('path', { d: 'M-14 -30C-15 -45 -11 -60 -5 -68', fill: 'none', stroke: '#ffd0d5', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: 0 }, outL.pg);
+  return { g, inked, inL, inR, inC, stam, outL, outR, front, vein, sheen, paths: [inL, inR, inC, outL, outR, front].map(p => p.e) };
 }
-mk('path', { d: 'M0 0C3 -2 4 2 1 4C-3 6 -6 1 -4 -3C-1 -8 7 -7 8 0C9 7 1 11 -5 9', fill: 'none', stroke: '#4a0f20', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, head);
+function shapeTulip(tl, open, color, draw = 1) {
+  const o = open;
+  if (tl.inked) { const sc = mix(INK, '#4a1018', color); if (tl.sc !== sc) { tl.sc = sc; for (const e of tl.paths) e.setAttribute('stroke', sc); } }
+  tl.inL.pg.setAttribute('transform', `translate(-3 0) rotate(${f2(-12 - 10 * o)})`);
+  tl.inR.pg.setAttribute('transform', `translate(3 0) rotate(${f2(12 + 10 * o)})`);
+  tl.outL.pg.setAttribute('transform', `translate(-6 0) rotate(${f2(-7 - 33 * o)})`);
+  tl.outR.pg.setAttribute('transform', `translate(6 0) rotate(${f2(7 + 33 * o)})`);
+  tl.front.pg.setAttribute('transform', `scale(${f2(1 + .05 * o)} ${f2(1 - .24 * o)})`);
+  tl.stam.setAttribute('opacity', f2(cl(o * 1.6 - .4) * color));
+  tl.vein.setAttribute('opacity', f2(.55 * color));
+  tl.sheen.setAttribute('opacity', f2(.5 * color));
+  const fo = f2(cl(draw * 1.6 - .5));
+  for (const e of tl.paths) { e.setAttribute('stroke-dashoffset', f2(1 - draw)); e.setAttribute('fill-opacity', fo); }
+}
 
-/* Until it opens, the rose is a bud seen from the side, in the same ink as the row. */
-const BUD_COL = '#e98a9c';
-const bud = mk('g', {}, svg);
-const budParts = [
-  { d: 'M0 18C-10 16 -22 8 -27 -6C-17 0 -8 4 -2 6Z', fill: LEAF },
-  { d: 'M0 18C10 16 22 8 27 -6C17 0 8 4 2 6Z', fill: LEAF },
-  { d: 'M0 18C-20 14 -24 -10 -12 -28C-7 -36 -2 -40 0 -42C2 -40 7 -36 12 -28C24 -10 20 14 0 18Z', fill: BUD_COL },
-  { d: 'M-12 -28C-4 -18 1 -2 0 16' }, { d: 'M12 -28C10 -18 9 -6 10 8' }, { d: 'M-4 -37C0 -31 4 -29 9 -29' },
-  { d: 'M0 18C-5 10 -4 1 0 -7C4 1 5 10 0 18Z', fill: LEAF }
-].map(p => ({ ...p, e: mk('path', { d: p.d, fill: p.fill ? PAPER : 'none', stroke: INK, 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': '1 1', 'stroke-dashoffset': 1 }, bud) }));
+/* the bouquet that forms in the middle of the heart: two more tulips, stems, leaves and a ribbon */
+const bqBack = mk('g', { opacity: 0 }, svg);
+const bqStems = [-1, 0, 1].map(() => mk('path', { fill: 'none', stroke: STEM, 'stroke-width': 1.6, 'stroke-linecap': 'round', pathLength: 1, 'stroke-dasharray': '1 1' }, bqBack));
+const bqLeaves = [-1, 1].map(s => mk('path', { d: TLEAF, fill: 'url(#lf)', stroke: '#3a4a30', 'stroke-width': 1.4, 'stroke-linejoin': 'round' }, bqBack));
+const sideTulips = [-1, 1].map(() => makeTulip(bqBack, false));
+const bow = mk('g', { opacity: 0 }, svg);
+mk('path', { d: 'M-2 3C-10 18 -16 30 -26 42L-17 41L-15 50C-6 36 0 22 3 6Z', fill: '#a8243f' }, bow);
+mk('path', { d: 'M2 3C10 18 16 30 26 42L17 41L15 50C6 36 0 22 -3 6Z', fill: '#c33a56' }, bow);
+mk('path', { d: 'M-4 -2C-22 -30 -56 -26 -52 -3C-48 15 -22 10 -4 3Z', fill: '#c73d58' }, bow);
+mk('path', { d: 'M4 -2C22 -30 56 -26 52 -3C48 15 22 10 4 3Z', fill: '#b02a47' }, bow);
+mk('path', { d: 'M-8 -1C-24 -20 -44 -19 -44 -5M8 -1C24 -20 44 -19 44 -5', fill: 'none', stroke: '#f3a3b2', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .6 }, bow);
+mk('rect', { x: -8, y: -8, width: 16, height: 16, rx: 5, fill: '#8c1733' }, bow);
+
+const heroHead = makeTulip(svg, true);
 
 /* The row: every flower she has been given before, drawn in ink. Base at 0,0; about 100 tall. */
 const FLOWERS = {
   tulip: () => [
     { d: 'M0 0C2 -26 -3 -50 0 -70', w: 1.4, stem: 1 },
     { d: 'M0 -6C14 -22 17 -44 9 -64C5 -46 2 -28 0 -16Z', fill: LEAF },
-    { d: 'M-11 -68C-14 -80 -11 -91 -6 -97L-2.5 -87L0 -99L2.5 -87L6 -97C11 -91 14 -80 11 -68C7 -63 -7 -63 -11 -68Z', fill: '#ef8a6b' },
+    { d: 'M-11 -68C-14 -80 -11 -91 -6 -97L-2.5 -87L0 -99L2.5 -87L6 -97C11 -91 14 -80 11 -68C7 -63 -7 -63 -11 -68Z', fill: '#f2b04f' },
     { d: 'M-2.5 -87C-3 -79 -2 -72 0 -66M2.5 -87C3 -79 2 -72 0 -66', w: .9 }
   ],
   daisy: () => {
@@ -175,95 +201,100 @@ const HEIGHTS = [.86, 1, .8, .94, .78, .9];
 /* ================= layout ================= */
 let W = 0, H = 0, G = { row: [], slots: [] };
 const heartEl = $('#heart'), stage = $('#stage'), glow = $('#glow'), flash = $('#flash');
+const blobs = [...document.querySelectorAll('.blob')], splash = $('#splash');
 
-const heartXY = th => [16 * Math.sin(th) ** 3, -(13 * Math.cos(th) - 5 * Math.cos(2 * th) - 2 * Math.cos(3 * th) - Math.cos(4 * th))];
+const heartXY = th => [16 * Math.sin(th) ** 3, -1.1 * (13 * Math.cos(th) - 5 * Math.cos(2 * th) - 2 * Math.cos(3 * th) - Math.cos(4 * th))];   // a touch taller than the textbook heart
+const PAIRS = 6;
 
 function layout() {
   W = innerWidth; H = innerHeight;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const m = Math.min(W, H);
+  const m = Math.min(W, H), wide = W > H;
   const ground = H - Math.max(14, H * .035);
   const rowH = cl(H * .16, 86, 165);
-  const R = cl(m * .155, 46, 96);
-  const headY = H * .5;
+  const R = cl(m * .15, 44, 92);                  // the tulip's head is 1.8 R tall
+  const headBase = H * .5 + R * .9;
   const sayTop = Math.max(H * .075, 26);
 
-  /* the rose's stem in screen space */
-  const L = ground - headY;
-  stem.setAttribute('d', `M${W / 2} ${ground}C${W / 2 - L * .05} ${ground - L * .35} ${W / 2 + L * .07} ${ground - L * .68} ${W / 2} ${headY + R * .35}`);
-  const leafAt = [[.3, 1], [.46, -1]].map(([f, side]) => [W / 2 + (side > 0 ? 2 : -2), ground - L * f]);
-  const leafScale = cl(R / 62, .75, 1.4);
-  leaves.forEach((lf, i) => { lf.x = leafAt[i][0]; lf.y = leafAt[i][1]; lf.s = leafScale; });
+  /* the tulip's stem and its two long leaves, in screen space */
+  const L = ground - headBase;
+  stem.setAttribute('d', `M${W / 2} ${ground}C${W / 2 - L * .05} ${ground - L * .35} ${W / 2 + L * .07} ${ground - L * .68} ${W / 2} ${headBase + 2}`);
+  heroLeaves.forEach((lf, i) => { lf.x = W / 2 + (i ? -1.5 : 1.5); lf.y = ground; lf.s = L * (i ? .5 : .62) / 172; });
 
   /* the row */
   rowG.textContent = '';
   const perSide = cl(Math.floor((W / 2 - R * .6) / (rowH * .34)), 2, 6);
   const gap = Math.max(R * .66, rowH * .3), reach = W / 2 - Math.max(26, rowH * .22);
   const row = [];
-  for (let s of [-1, 1]) for (let j = 0; j < perSide; j++) {
+  for (const s of [-1, 1]) for (let j = 0; j < perSide; j++) {
     const name = (s < 0 ? ROW_LEFT : ROW_RIGHT)[j];
     const x = W / 2 + s * (gap + (perSide === 1 ? 0 : j * (reach - gap) / (perSide - 1)));
     const k = rowH * HEIGHTS[(j + (s > 0 ? 3 : 0)) % HEIGHTS.length] / 100;
     const g = mk('g', {}, rowG);
     const parts = FLOWERS[name]().map(p => {
-      const e = mk('path', { d: p.d, fill: p.fill ? PAPER : 'none', stroke: INK, 'stroke-width': (p.w || 1) / Math.sqrt(k), 'stroke-linecap': 'round', 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': '1 1', 'stroke-dashoffset': 1 }, g);
+      const e = mk('path', { d: p.d, fill: p.fill ? PAPER : 'none', 'stroke-width': (p.w || 1) / Math.sqrt(k), 'stroke-dashoffset': 1, ...INKED }, g);
       return { e, fill: p.fill, stem: p.stem };
     });
-    row.push({ g, parts, x, k, side: s, j, dist: j });
+    row.push({ g, parts, x, k, side: s, j });
   }
-  /* sprout order: nearest the rose first, alternating sides */
   row.sort((a, b) => a.j - b.j || a.side - b.side).forEach((f, q) => { f.q = q; });
 
-  /* the heart of photos */
+  /* the heart of photos: six pairs, big */
   const N = 600, pts = [], cum = [0];
   for (let i = 0; i <= N; i++) { pts.push(heartXY(Math.PI * i / N)); if (i) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); }
-  const half = cum[N], step = half / 8;
+  const half = cum[N], step = half / PAIRS;
   let minY = Infinity, maxY = -Infinity;
   for (const p of pts) { minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); }
-  const tileU = step * .98, tileHU = tileU * 1.17;
-  const availH = H * (W > H ? .6 : .52);
-  const u = Math.min((W - 30) / (32 + tileU), availH / (maxY - minY + tileHU));
-  const top = Math.max(H * (W > H ? .05 : .1), 22);
+  const tileU = step * .86, tileHU = tileU * 1.17;           // a little air between the photos keeps the outline readable
+  const availH = H * (wide ? .7 : .6);
+  const u = Math.min((W - (wide ? 40 : 14)) / (32 + tileU), availH / (maxY - minY + tileHU));
+  const top = Math.max(H * (wide ? .03 : .065), 16);
   const hx = W / 2, hy = top + (tileHU / 2 - minY) * u;
   const slots = [];
-  for (let k = 0; k < 8; k++) {
+  for (let k = 0; k < PAIRS; k++) {
     const s = (k + .5) * step;
     let i = 1; while (cum[i] < s) i++;
     const f = (s - cum[i - 1]) / (cum[i] - cum[i - 1]);
     const x = lerp(pts[i - 1][0], pts[i][0], f), y = lerp(pts[i - 1][1], pts[i][1], f);
     const ang = Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]) / D2R;
-    for (const side of [-1, 1]) slots.push({ x: hx + side * x * u, y: hy + y * u, rot: side * (ang - 90) * .14 + side * (k % 2 ? 3 : -2.5), k, side });
+    for (const side of [-1, 1]) slots.push({ x: hx + side * x * u, y: hy + y * u, rot: side * (ang - 90) * .12 + side * (k % 2 ? 3.5 : -3), k, side });
   }
   const tile = tileU * u;
   heartEl.style.setProperty('--tw', `${tile.toFixed(1)}px`);
-  heartEl.style.transformOrigin = `${hx}px ${hy + 2.5 * u}px`;
+  heartEl.style.transformOrigin = `${hx}px ${hy + 3 * u}px`;
   const outline = [];
   for (let i = 0; i < 48; i++) { const [x, y] = heartXY(i / 48 * Math.PI * 2); outline.push([hx + x * u, hy + y * u]); }
 
+  /* the bouquet in the middle of the heart */
+  const bs = 5.4 * u / 90;
+  const bq = { x: hx, base: hy + 4.6 * u, s: bs, tie: hy + 9.4 * u, end: hy + 12.6 * u, side: 3.3 * u, sideBase: hy + 5.8 * u };
+  const fc = [hx, bq.base - 44 * bs];
+
   const heartBottom = hy + (maxY + tileHU / 2) * u;
   stage.style.setProperty('--sayTop', `${sayTop}px`);
-  stage.style.setProperty('--sayLow', `${heartBottom + Math.max(16, H * .025)}px`);
-  stage.style.setProperty('--finTop', `${heartBottom + Math.max(16, H * .025) + 54}px`);
+  stage.style.setProperty('--sayLow', `${heartBottom + Math.max(14, H * .02)}px`);
+  stage.style.setProperty('--finTop', `${heartBottom + Math.max(14, H * .02) + 54}px`);
 
-  G = { ground, rowH, R, headY, row, slots, tile, u, hx, hy, rose: [hx, hy + 2.5 * u], roseR: 5.4 * u, outline, m };
+  /* watercolour washes: where they rest */
+  const vm = Math.max(W, H);
+  const BL = [[.18, .22, .95, '#f4c4cc'], [.86, .72, .85, '#d6e3c6'], [.78, .12, .7, '#f8d8c0']];
+  blobs.forEach((b, i) => { const [x, y, s, c] = BL[i]; b.style.width = b.style.height = `${(s * vm).toFixed(0)}px`; b.style.background = `radial-gradient(closest-side,${c},${c}00)`; b.dataset.x = x * W - s * vm / 2; b.dataset.y = y * H - s * vm / 2; });
+
+  G = { ground, rowH, R, headBase, row, slots, tile, u, hx, hy, bq, fc, outline, m, L };
   fxSize();
   seedParticles();
 }
 
 /* ================= photos ================= */
-const PHOTOS = [   // name, object-position: faces stay in the square crop
-  ['hero', '50% 28%'], ['portrait', '50% 30%'], ['eighteen', '50% 22%'], ['closeup', '50% 40%'],
-  ['flowers', '50% 8%'], ['balloons', '30% 62%'], ['cafe', '50% 40%'], ['shades', '50% 30%'],
-  ['eclair', '50% 24%'], ['headphones', '50% 40%'], ['bite', '50% 28%'], ['selfie', '42% 50%'],
-  ['kart', '55% 42%'], ['suit', '50% 40%'], ['cover', '50% 30%'], ['ridge', '50% 45%']
-];
-const tiles = PHOTOS.map(([name, pos], i) => {
+/* left and right of each pair, from the dip at the top down to the point: mostly her with flowers */
+const PHOTOS = ['flowers', 'portrait', 'g6', 'g1', 'g5', 'g2', 'g3', 'cafe', 'g8', 'g4', 'eighteen', 'shades'];
+const tiles = PHOTOS.map((name, i) => {
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'ph'; b.setAttribute('aria-label', 'Rasmni kattalashtirish');
-  const img = new Image(); img.alt = ''; img.decoding = 'async'; img.style.objectPosition = pos;
+  const img = new Image(); img.alt = ''; img.decoding = 'async';
   b.appendChild(img); heartEl.appendChild(b);
   b.style.zIndex = i;
-  return { b, img, name, src: `../assets/img/thumb/${name}.webp`, big: `../assets/img/${name}-800.webp`, spin: (i % 2 ? 1 : -1) * (120 + (i * 37) % 140) };
+  return { b, img, name, src: `assets/img/${name}.webp?v=2`, big: `assets/img/${name}-big.webp?v=2`, spin: (i % 2 ? 1 : -1) * (120 + (i * 37) % 140), vis: -1 };
 });
 
 /* An image is only handed to a tile once it has really arrived; until then it keeps trying, quietly. */
@@ -276,15 +307,15 @@ function fetchImg(src, n = 0) {
   });
 }
 
-/* ================= canvas: petals and sparks ================= */
+/* ================= canvas: petals, light, sparks ================= */
 const cv = $('#fx'), cx = cv.getContext('2d');
 let DPR = 1;
 function fxSize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
 }
-const PETAL_COLS = ['#c2314f', '#d9496a', '#e8708b', '#f29bb0', '#a61f3d', '#f7c1cb', '#e35d79'];
-let bursts = [], ambient = [], sparks = [];
+const PETAL_COLS = ['#c8102e', '#e0283f', '#a50d24', '#f05867', '#7a0c1f', '#f7a1aa', '#ff4d5e', '#f4c2c8'];
+let bursts = [], ambient = [], sparks = [], motes = [], ripples = [];
 function seedParticles() {
   const r = mulberry(18), sc = G.m / 420;
   const burst = (t0, n, speed, size) => Array.from({ length: n }, () => {
@@ -292,12 +323,14 @@ function seedParticles() {
     return { t0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120 * sc, s: (size[0] + r() * (size[1] - size[0])) * Math.max(.8, sc),
       a0: r() * 6.3, spin: (r() - .5) * 9, flip: 2 + r() * 5, ph: r() * 6.3, wob: 8 + r() * 22, col: PETAL_COLS[(r() * PETAL_COLS.length) | 0], life: 3.2 + r() * 1.6 };
   });
-  bursts = [...burst(DROP, 170, [380, 1150], [5, 11]), ...burst(WHOLE, 70, [200, 620], [4, 8])];
+  bursts = [...burst(DROP, 190, [380, 1200], [5, 12]), ...burst(WHOLE, 80, [200, 650], [4, 9])];
   ambient = Array.from({ length: 22 }, () => ({ x: r(), off: r(), vy: (34 + r() * 40) * Math.max(.8, sc), s: (4 + r() * 6) * Math.max(.8, sc),
     a0: r() * 6.3, spin: (r() - .5) * 2, flip: 1 + r() * 2.5, ph: r() * 6.3, wob: 14 + r() * 26, col: PETAL_COLS[(r() * PETAL_COLS.length) | 0] }));
+  motes = Array.from({ length: 46 }, () => ({ x: r(), y: r(), sp: (7 + r() * 16) * Math.max(.8, sc), sw: 8 + r() * 26, ph: r() * 6.3, s: (.7 + r() * 1.7) * Math.max(.9, sc), gold: r() < .72, tw: 1 + r() * 2 }));
   sparks = [];
-  G.slots.forEach((s, i) => { const land = landOf(i); for (let k = 0; k < 7; k++) sparks.push({ t0: land, x: s.x, y: s.y, a: r() * 6.3, d: (16 + r() * 20) * sc, gold: r() < .6 }); });
-  G.outline.forEach(([x, y], i) => sparks.push({ t0: WHOLE + (i % 6) * .02, x, y, a: r() * 6.3, d: (10 + r() * 26) * sc, gold: true, big: 1 }));
+  G.slots.forEach((s, i) => { const land = landOf(i); for (let k = 0; k < 9; k++) sparks.push({ t0: land, x: s.x, y: s.y, a: r() * 6.3, d: (18 + r() * 26) * sc, gold: r() < .6 }); });
+  G.outline.forEach(([x, y], i) => sparks.push({ t0: WHOLE + (i % 6) * .02, x, y, a: r() * 6.3, d: (10 + r() * 28) * sc, gold: true, big: 1 }));
+  ripples = [];
 }
 function petal(x, y, s, a, flip, col, alpha) {
   cx.save(); cx.translate(x, y); cx.rotate(a); cx.scale(1, .18 + .82 * Math.abs(Math.cos(flip)));
@@ -306,11 +339,49 @@ function petal(x, y, s, a, flip, col, alpha) {
   cx.globalAlpha = alpha * .35; cx.fillStyle = '#fff'; cx.beginPath(); cx.ellipse(-s * .2, -s * .25, s * .18, s * .45, -.3, 0, 6.3); cx.fill();
   cx.restore();
 }
-function drawFx(t) {
+function star(x, y, r, col, alpha) {
+  cx.globalAlpha = alpha; cx.fillStyle = col;
+  cx.beginPath(); cx.moveTo(x, y - r * 2.4); cx.lineTo(x + r * .6, y); cx.lineTo(x, y + r * 2.4); cx.lineTo(x - r * .6, y); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(x - r * 2.4, y); cx.lineTo(x, y + r * .6); cx.lineTo(x + r * 2.4, y); cx.lineTo(x, y - r * .6); cx.closePath(); cx.fill();
+}
+
+/* the magic pen: wherever ink is being laid down, a few sparks fall off the nib */
+let pens = [], penSparks = [], lastNow = 0;
+const penRnd = mulberry(7);
+
+function drawFx(t, now, flower, trails) {
   cx.setTransform(DPR, 0, 0, DPR, 0, 0);
   cx.clearRect(0, 0, W, H);
-  const [ox, oy] = G.rose;
-  const K = 2.3, g = 270 * G.m / 420;
+  const [ox, oy] = G.fc;
+  const sc = G.m / 420;
+
+  /* dust in the light: drifts up, twinkles on the beat, stops dead in the silence, is pulled into the flower before the drop */
+  const te = t < HUSH ? t : t < RISE ? HUSH : t - (RISE - HUSH);
+  const pull = t < DROP ? eio(span(t, RISE, DROP - .04)) : 0;
+  const moteVis = t < DROP ? 1 : t < WHOLE ? 0 : cl((t - WHOLE) / 2) * .75;
+  if (moteVis > 0) {
+    const tw = t < DROP ? tick(t) : pulse(t) * .6;
+    for (const m of motes) {
+      let y = ((m.y * (H + 40) - te * m.sp) % (H + 40) + H + 40) % (H + 40) - 20;
+      let x = m.x * W + Math.sin(te * .45 + m.ph) * m.sw;
+      if (pull > 0) { x = lerp(x, flower[0], pull); y = lerp(y, flower[1], pull); }
+      const a = moteVis * (.28 + .42 * Math.sin(te * m.tw + m.ph) ** 2) * (1 + .9 * tw) * (1 - pull * .3);
+      cx.globalAlpha = cl(a * .28); cx.fillStyle = m.gold ? '#f0c56a' : '#ffffff';
+      cx.beginPath(); cx.arc(x, y, m.s * 3.2, 0, 6.3); cx.fill();
+      cx.globalAlpha = cl(a); cx.beginPath(); cx.arc(x, y, m.s * (1 + pull * .6), 0, 6.3); cx.fill();
+    }
+  }
+
+  /* rings: on each beat of the bloom, on the drop, when the heart closes */
+  for (const rp of ripples) {
+    const p = span(t, rp.t0, rp.t0 + rp.d); if (p <= 0 || p >= 1) continue;
+    const [x, y] = rp.at();
+    cx.globalAlpha = (1 - p) ** 2 * rp.a; cx.strokeStyle = rp.col; cx.lineWidth = rp.w * (1 - p) + .6;
+    cx.beginPath(); cx.arc(x, y, lerp(rp.r0, rp.r1, eo(p)), 0, 6.3); cx.stroke();
+  }
+
+  /* the drop: the tulip bursts; then petals keep falling */
+  const K = 2.3, g = 270 * sc;
   for (const p of bursts) {
     const dt = t - p.t0; if (dt < 0 || dt > p.life + 1) continue;
     const e = (1 - Math.exp(-K * dt)) / K;
@@ -327,151 +398,203 @@ function drawFx(t) {
       petal(x, y, p.s, p.a0 + p.spin * tt, p.ph + p.flip * tt, p.col, .85 * fade);
     }
   }
+
+  /* photos leave a short glittering wake */
+  for (const tr of trails) for (let j = 0; j < tr.length; j++) star(tr[j][0], tr[j][1], 1.6 * (1 - j / tr.length) + .3, j % 2 ? '#fff' : '#f0c56a', .75 * (1 - j / tr.length));
+
+  /* sparks where each photo lands, and around the whole heart when it closes */
   for (const s of sparks) {
-    const dt = t - s.t0; if (dt < 0 || dt > .75) continue;
-    const p = dt / .75, x = s.x + Math.cos(s.a) * s.d * eo(p), y = s.y + Math.sin(s.a) * s.d * eo(p), r = (s.big ? 2.6 : 1.9) * (1 - p) + .4;
-    cx.globalAlpha = (1 - p) ** 1.3; cx.fillStyle = s.gold ? '#e2ac4f' : '#fff';
-    cx.beginPath(); cx.moveTo(x, y - r * 2.4); cx.lineTo(x + r * .6, y); cx.lineTo(x, y + r * 2.4); cx.lineTo(x - r * .6, y); cx.closePath(); cx.fill();
-    cx.beginPath(); cx.moveTo(x - r * 2.4, y); cx.lineTo(x, y + r * .6); cx.lineTo(x + r * 2.4, y); cx.lineTo(x, y - r * .6); cx.closePath(); cx.fill();
+    const dt = t - s.t0; if (dt < 0 || dt > .8) continue;
+    const p = dt / .8;
+    star(s.x + Math.cos(s.a) * s.d * eo(p), s.y + Math.sin(s.a) * s.d * eo(p), (s.big ? 2.7 : 2) * (1 - p) + .4, s.gold ? '#e2ac4f' : '#fff', (1 - p) ** 1.3);
+  }
+
+  /* the nib's sparks (real time, not song time: they are only decoration) */
+  const dt = Math.min(.05, Math.max(0, (now - lastNow) / 1000)); lastNow = now;
+  for (const pn of pens) {
+    if (t < pn.a || t > pn.b || !pn.el.isConnected) continue;
+    const L = pn.len || (pn.len = pn.el.getTotalLength());
+    const q = pn.ease(span(t, pn.a, pn.b));
+    const ctm = pn.el.getScreenCTM(); if (!ctm) continue;
+    const pt = pn.el.getPointAtLength(L * q).matrixTransform(ctm);
+    for (let k = 0; k < 2; k++) penSparks.push({ x: pt.x, y: pt.y, vx: (penRnd() - .5) * 60, vy: -10 - penRnd() * 40, life: .5 + penRnd() * .5, age: 0, gold: penRnd() < .7 });
+    cx.globalAlpha = .9; cx.fillStyle = '#fff6dd'; cx.beginPath(); cx.arc(pt.x, pt.y, 3.2, 0, 6.3); cx.fill();
+    cx.globalAlpha = .35; cx.fillStyle = '#f0c56a'; cx.beginPath(); cx.arc(pt.x, pt.y, 9, 0, 6.3); cx.fill();
+  }
+  penSparks = penSparks.filter(s => (s.age += dt) < s.life);
+  for (const s of penSparks) {
+    s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 30 * dt;
+    star(s.x, s.y, 1.3 * (1 - s.age / s.life) + .3, s.gold ? '#e8b44f' : '#fff', 1 - s.age / s.life);
   }
   cx.globalAlpha = 1;
 }
 
 /* ================= the film ================= */
-const landOf = i => DROP + (Math.floor(i / 2) + 1) * HB;   // pairs land on every half beat; the last pair closes the heart on the downbeat
+const landOf = i => DROP + (Math.floor(i / 2) + 3) * HB;   // the burst first, then a pair every half beat; the last pair closes the heart on the downbeat
+const BLOOM = [18, 19, 20, 21].map(beatAt);                  // the four beats the tulip opens on
+let lastFlower = [0, 0];
 
-function setRingOpen(o, color) {
-  RINGS.forEach((R, i) => {
-    const oi = eio(cl(o * 1.25 - (RINGS.length - 1 - i) * .06 - i * .02));
-    const closed = (5 + i * 3.4) / R.r1;
-    const s = lerp(closed, 1, oi);
-    ringEls[i].setAttribute('transform', `rotate(${(R.rot + (1 - oi) * 38).toFixed(2)}) scale(${s.toFixed(4)})`);
-  });
-  PETAL_STOPS.forEach(([, c], i) => petalStops[i].setAttribute('stop-color', mix(PAPER, c, color)));
-  [LEAF, LEAF2].forEach((c, i) => leafStops[i].setAttribute('stop-color', mix(PAPER, c, color)));
-  const lo = (color * .6).toFixed(3);
-  for (const l of lips) l.setAttribute('opacity', lo);
-}
-
-let lastTiles = -1;
-function render(t) {
-  const { ground, rowH, R, headY, row } = G;
+function render(t, now) {
+  const { ground, rowH, R, headBase, row, bq } = G;
   const still = t >= HUSH && t < RISE;                       // the song goes silent: so does everything else
   const swayAmp = still ? 0 : t < RISE ? 1 : t > WHOLE ? .8 : 0;
   const sway = (ph, a) => Math.sin((t - B0) / (2 * BEAT) * Math.PI * 2 + ph) * a * swayAmp;
 
-  /* --- the rose: stem draws in, a bud, it opens on four beats, then steps down into the row --- */
+  /* --- colour of the tulip: ink, a blush on the fourth bar, then red on the fifth --- */
+  const color = t < bar(3) ? 0 : t < bar(4) ? .28 * eo(span(t, bar(3), bar(4))) : .28 + .72 * eo(span(t, bar(4), bar(4) + 1.6));
+  paint(color);
+
+  /* --- stem and leaves: drawn in, then the whole plant steps down into the row --- */
   const stemP = eio(span(t, .55, 2.05));
   stem.setAttribute('stroke-dashoffset', (1 - stemP).toFixed(4));
   stem.setAttribute('visibility', stemP > 0 ? 'visible' : 'hidden');
-  const color = eo(span(t, bar(4), bar(4) + 1.9));
-  stem.setAttribute('stroke', mix('#5a4943', '#55744b', color));
+  stem.setAttribute('stroke', mix(INK, STEM, color));
   const shrink = eio(span(t, bar(5), beatAt(24)));
-  const sRow = (rowH * 1.02) / (ground - headY + R * .5);
+  const headTop = headBase - 1.8 * R;
+  const sRow = (rowH * 1.06) / (ground - headTop);
   const s = lerp(1, sRow, shrink);
   const lifting = span(t, RISE, DROP - .05);
   const stemFade = 1 - span(t, RISE, RISE + .5);
-  roseAll.setAttribute('transform', `translate(${W / 2} ${ground}) rotate(${sway(0, 1.4)}) scale(${s.toFixed(4)}) translate(${-W / 2} ${-ground})`);
-  roseAll.setAttribute('opacity', (t < DROP ? stemFade : 0).toFixed(3));
-  leaves.forEach((lf, i) => {
-    const p = eback(span(t, 1.15 + i * BEAT, 1.15 + i * BEAT + .8));
-    lf.g.setAttribute('transform', `translate(${lf.x} ${lf.y}) scale(${lf.side * lf.s * p} ${lf.s * p}) rotate(${-24 + sway(i, 3)})`);
+  heroAll.setAttribute('transform', `translate(${W / 2} ${ground}) rotate(${f2(sway(0, 1.2))}) scale(${s.toFixed(4)}) translate(${-W / 2} ${-ground})`);
+  heroAll.setAttribute('opacity', (t < DROP ? stemFade : 0).toFixed(3));
+  heroLeaves.forEach((lf, i) => {
+    const p = eback(span(t, 1.1 + i * HB, 1.1 + i * HB + .9));
+    lf.g.setAttribute('transform', `translate(${lf.x} ${lf.y}) rotate(${f2(lf.side * (8 + sway(i, 2.5)))}) scale(${(lf.side * lf.s * p).toFixed(4)} ${(lf.s * p).toFixed(4)})`);
   });
 
-  /* where the head sits: top of the (scaled) stem, then lifted into the heart */
-  const topX = W / 2, topY = ground - (ground - headY) * s;
-  let hx = topX, hy = topY, hr = R * s;
-  if (t >= RISE) {
-    const p = eio(lifting);
-    hx = lerp(topX, G.rose[0], p); hy = lerp(topY, G.rose[1], p); hr = lerp(R * s, G.roseR, p);
-  }
-  /* the bud: drawn in ink on the first bar, swells and blushes on the fourth, hands over to the open rose on the fifth */
-  const budDraw = eio(span(t, 1.8, 2.9));
-  const budBlush = .5 * eo(span(t, bar(3), bar(4)));
-  const budSwell = 1 + .14 * eio(span(t, bar(3), bar(4))) + (t >= bar(3) && t < bar(4) ? .035 * pulse(t) : 0);
-  const budOp = 1 - span(t, bar(4), bar(4) + .45);
-  bud.setAttribute('opacity', t < 1.8 ? 0 : budOp.toFixed(3));
-  if (budOp > 0) {
-    bud.setAttribute('transform', `translate(${hx.toFixed(2)} ${hy.toFixed(2)}) rotate(${sway(0, 1.4).toFixed(2)}) scale(${(hr / 50 * .72 * budSwell).toFixed(4)})`);
-    for (const p of budParts) {
-      p.e.setAttribute('stroke-dashoffset', (1 - budDraw).toFixed(4));
-      if (p.fill) { p.e.setAttribute('fill', p.fill === BUD_COL ? mix(PAPER, BUD_COL, budBlush) : mix(PAPER, p.fill, budBlush * .8)); p.e.setAttribute('fill-opacity', cl(budDraw * 1.6 - .5).toFixed(3)); }
-    }
-  }
-  const budIn = eo(span(t, bar(4) - .05, bar(4) + .4));
-  const open = t < bar(4) ? 0 : [0, 1, 2, 3].reduce((acc, k) => acc + .25 * eo(span(t, beatAt(18 + k), beatAt(18 + k) + .55)), 0);
-  setRingOpen(open, color);
+  /* --- the head: on its stem, then lifted into the middle of the heart --- */
+  let hx = W / 2, hy = ground - (ground - headBase) * s, hk = R / 50 * s;
+  if (t >= RISE) { const p = eio(lifting); hx = lerp(hx, bq.x, p); hy = lerp(hy, bq.base, p); hk = lerp(hk, bq.s, p); }
+  const draw = eio(span(t, 1.8, 2.9));
+  const swell = 1 + (t >= bar(3) && t < bar(4) ? .1 * eio(span(t, bar(3), bar(4))) + .035 * pulse(t) : t >= bar(4) && t < bar(5) ? .1 * (1 - span(t, bar(4), bar(4) + .6)) : 0);
+  const open = t < bar(4) ? 0 : BLOOM.reduce((a, b) => a + .19 * eo(span(t, b, b + .5)), 0) + (t > WHOLE ? .06 * pulse(t) : 0);
   let punch = 1;
-  if (t >= DROP) punch += .32 * Math.exp(-(t - DROP) / .16) + .22 * Math.exp(-Math.max(0, t - WHOLE) / .2) * (t >= WHOLE ? 1 : 0) + .05 * pulse(t);
-  const squash = lerp(1.22, .86, eo(cl(open * 1.3)));
-  const spin = t > DROP ? (t - DROP) * 5 : 0;
-  const hs = hr / 50 * lerp(.7, 1, budIn) * punch;
-  head.setAttribute('transform', `translate(${hx.toFixed(2)} ${hy.toFixed(2)}) rotate(${(sway(0, 1.4) * .5).toFixed(2)}) scale(${hs.toFixed(4)} ${(hs * squash).toFixed(4)}) rotate(${spin.toFixed(2)})`);
-  sepals.setAttribute('transform', `scale(${lerp(.3, 1, eo(cl((open - .35) / .65)))})`);
-  head.setAttribute('opacity', budIn.toFixed(3));
+  if (t >= DROP) punch += .3 * Math.exp(-(t - DROP) / .16) + (t >= WHOLE ? .2 * Math.exp(-(t - WHOLE) / .2) : 0) + .04 * pulse(t);
+  shapeTulip(heroHead, open, color, draw);
+  heroHead.g.setAttribute('transform', `translate(${f2(hx)} ${f2(hy)}) rotate(${f2(sway(0, 1.6))}) scale(${(hk * swell * punch).toFixed(4)})`);
+  heroHead.g.setAttribute('opacity', t < 1.8 ? 0 : 1);
+  const flower = [hx, hy - 44 * hk * swell * punch];
+  lastFlower = flower;
 
-  /* --- the row of flowers: sprouts in on half beats, gets its colour when the rose joins, bows before the drop --- */
+  /* --- the bouquet gathers around it when the heart closes --- */
+  const bqP = span(t, WHOLE - .05, WHOLE + 1.1);
+  bqBack.setAttribute('opacity', t >= WHOLE - .05 ? 1 : 0);
+  bow.setAttribute('opacity', t >= WHOLE ? cl((t - WHOLE - .35) * 4) : 0);
+  if (t >= WHOLE - .05) {
+    const k = bq.s, hb = 1 + .035 * pulse(t);
+    bqStems.forEach((e, i) => {
+      const sx = i === 1 ? bq.x : bq.x + (i - 1) * bq.side, sy = i === 1 ? bq.base : bq.sideBase;
+      e.setAttribute('d', `M${f2(sx)} ${f2(sy)}Q${f2(lerp(sx, bq.x, .6))} ${f2(lerp(sy, bq.tie, .5))} ${f2(bq.x + (i - 1) * 2)} ${f2(bq.tie)}L${f2(bq.x + (i - 1) * G.u * 1.3)} ${f2(bq.end)}`);
+      e.setAttribute('stroke-dashoffset', f2(1 - eo(span(t, WHOLE, WHOLE + .45))));
+      e.setAttribute('stroke-width', f2(Math.max(1.4, G.u * .24)));
+    });
+    bqLeaves.forEach((e, i) => {
+      const sd = i ? 1 : -1, p = eback(span(t, WHOLE + .1 + i * .18, WHOLE + .8 + i * .18));
+      const lk = G.u * 7.5 / 172;
+      e.setAttribute('transform', `translate(${f2(bq.x + sd * 2)} ${f2(bq.end)}) rotate(${sd * 26}) scale(${(-sd * lk * p).toFixed(4)} ${(lk * p).toFixed(4)})`);
+    });
+    sideTulips.forEach((tl, i) => {
+      const sd = i ? 1 : -1, p = eback(span(t, WHOLE + .18 * (i + 1), WHOLE + .18 * (i + 1) + .7));
+      shapeTulip(tl, .45 + .06 * pulse(t), 1, 1);
+      tl.g.setAttribute('transform', `translate(${f2(bq.x + sd * bq.side)} ${f2(bq.sideBase)}) rotate(${sd * 19 + sway(i * 2, 1.5)}) scale(${(k * .82 * p * hb).toFixed(4)})`);
+    });
+    bow.setAttribute('transform', `translate(${f2(bq.x)} ${f2(bq.tie)}) scale(${(G.u * .045 * eback(span(t, WHOLE + .35, WHOLE + .95)) * hb).toFixed(4)})`);
+  }
+
+  /* --- the row of flowers: sprouts in on half beats, takes colour when the tulip joins, bows before the drop --- */
   const back = t >= WHOLE ? eo(span(t, WHOLE + .2, WHOLE + 1.6)) : 0;
+  pens.length = 0;
+  pens.push({ el: stem, a: .55, b: 2.05, ease: eio });
+  pens.push({ el: heroHead.front.e, a: 1.8, b: 2.9, ease: eio });
   for (const f of row) {
     const st = bar(1) + f.q * HB;
-    const draw = eio(span(t, st, st + 1.1));
+    const fdraw = eio(span(t, st, st + 1.1));
     const c = t >= WHOLE ? 1 : eo(span(t, beatAt(24) + .25 + f.j * .28, beatAt(24) + 1.05 + f.j * .28));
-    const bow = t >= WHOLE ? 0 : eio(lifting);
-    const vis = t < RISE ? 1 : t < WHOLE ? 1 - bow : back;
-    const grow = t >= WHOLE ? lerp(.6, 1, back) : 1;
-    f.g.setAttribute('transform', `translate(${f.x} ${ground}) rotate(${(sway(f.x * .01, 2.4) + f.side * 14 * bow).toFixed(2)}) scale(${(f.k * grow).toFixed(4)})`);
-    f.g.setAttribute('opacity', (draw <= 0 && t < WHOLE ? 0 : vis * (t >= WHOLE ? .92 : 1)).toFixed(3));   // round caps would leave dots before the ink starts
-    const shown = t >= WHOLE ? 1 : draw;
+    const bowP = t >= WHOLE ? 0 : eio(lifting);
+    const vis = t < RISE ? 1 : t < WHOLE ? 1 - bowP : back;
+    const grow = t >= WHOLE ? lerp(.45, .72, back) : 1;
+    f.g.setAttribute('transform', `translate(${f.x} ${ground}) rotate(${f2(sway(f.x * .01, 2.4) + f.side * 14 * bowP)}) scale(${(f.k * grow).toFixed(4)})`);
+    f.g.setAttribute('opacity', (fdraw <= 0 && t < WHOLE ? 0 : vis * (t >= WHOLE ? .92 : 1)).toFixed(3));
+    const shown = t >= WHOLE ? 1 : fdraw;
     for (const p of f.parts) {
       p.e.setAttribute('stroke-dashoffset', (1 - shown).toFixed(4));
       if (p.fill) { p.e.setAttribute('fill', mix(PAPER, p.fill, c)); p.e.setAttribute('fill-opacity', cl(shown * 1.6 - .5).toFixed(3)); }
-      if (p.stem) p.e.setAttribute('stroke', mix('#5a4943', '#55744b', c));
+      if (p.stem) p.e.setAttribute('stroke', mix(INK, STEM, c));
     }
+    if (t < WHOLE) pens.push({ el: f.parts[0].e, a: st, b: st + 1.1, ease: eio });
   }
 
-  /* --- the room: dusk in the silence, a flash on the drop, a glow that beats behind the heart --- */
-  const dusk = t < HUSH ? 0 : t < DROP ? lerp(.22, .62, span(t, RISE, DROP)) * span(t, HUSH, HUSH + .6) : .0;
+  /* --- the room --- */
+  /* watercolour washes drift all the time, warm up as the tulip turns red, and gather behind the heart */
+  const warm = t < bar(4) ? .55 : t < DROP ? .55 + .35 * span(t, bar(4), bar(5)) : .8;
+  blobs.forEach((b, i) => {
+    const dx = Math.sin(t * .11 + i * 2) * 40, dy = Math.cos(t * .09 + i) * 30, sc2 = 1 + .06 * Math.sin(t * .2 + i) + (t >= DROP ? .05 * pulse(t) : 0);
+    b.style.transform = `translate(${(+b.dataset.x + dx).toFixed(1)}px,${(+b.dataset.y + dy).toFixed(1)}px) scale(${sc2.toFixed(3)})`;
+    b.style.opacity = (warm * (t < .4 ? t / .4 : 1)).toFixed(3);
+  });
+  /* the red wash that spreads behind the tulip on each beat it opens */
+  const sp = BLOOM.reduce((a, b) => a + .25 * eo(span(t, b, b + .6)), 0);
+  const spFade = t < bar(5) ? 1 : 1 - span(t, bar(5), bar(5) + 1.4);
+  const spSize = R * 7 * (.35 + .65 * sp) * (1 + .05 * (t >= bar(4) ? tick(t) : 0));
+  splash.style.width = splash.style.height = `${spSize.toFixed(1)}px`;
+  splash.style.transform = `translate(${(flower[0] - spSize / 2).toFixed(1)}px,${(flower[1] - spSize / 2).toFixed(1)}px)`;
+  splash.style.opacity = (t < bar(4) ? 0 : .72 * spFade * cl(sp * 3)).toFixed(3);
+
+  const dusk = t < HUSH ? 0 : t < DROP ? lerp(.22, .62, span(t, RISE, DROP)) * span(t, HUSH, HUSH + .6) : 0;
   stage.style.setProperty('--dusk', dusk.toFixed(3));
-  const fl = t >= DROP ? (1 - span(t, DROP, DROP + .7)) ** 2 * .92 : 0;
-  flash.style.opacity = fl.toFixed(3);
+  flash.style.opacity = (t >= DROP ? (1 - span(t, DROP, DROP + .7)) ** 2 * .92 : 0).toFixed(3);
   const beatNow = t >= DROP ? pulse(t) : 0;
   const gl = t >= RISE ? (t < DROP ? .25 + .75 * lifting : .55 + .35 * beatNow) : 0;
-  const gs = (G.u * 34) * (1 + .06 * beatNow) * (t < DROP ? lerp(.4, 1, lifting) : 1);
+  const gs = (G.u * 30) * (1 + .07 * beatNow) * (t < DROP ? lerp(.4, 1, lifting) : 1);
   glow.style.opacity = gl.toFixed(3);
-  glow.style.transform = `translate(${(G.rose[0] - gs / 2).toFixed(1)}px,${(G.rose[1] - gs / 2).toFixed(1)}px)`;
+  glow.style.transform = `translate(${(G.fc[0] - gs / 2).toFixed(1)}px,${(G.fc[1] - gs / 2).toFixed(1)}px)`;
   glow.style.width = glow.style.height = `${gs.toFixed(1)}px`;
 
-  /* --- the heart: photos leave the rose in pairs, one pair every half beat, and close on the downbeat --- */
-  const hb = t >= DROP ? 1 + (t >= WHOLE ? .045 : .018) * pulse(t) : 1;
-  heartEl.style.transform = `scale(${hb.toFixed(4)})`;
-  let landed = 0;
+  /* --- the heart: photos leave the tulip in pairs, one pair every half beat, and close on the downbeat --- */
+  heartEl.style.transform = `scale(${(t >= DROP ? 1 + (t >= WHOLE ? .04 : .015) * pulse(t) : 1).toFixed(4)})`;
+  const trails = [];
+  const [sx, sy] = G.fc;
   tiles.forEach((tl, i) => {
-    const slot = G.slots[i], land = landOf(i), launch = Math.max(DROP, land - .62);
+    const slot = G.slots[i], land = landOf(i), launch = land - .62;
     if (t < launch) {
-      /* a few seconds early they are painted once, invisibly, inside the rose, so the drop never waits for a decode */
-      const warm = t > HUSH - 1.5 ? 2 : 0;
-      if (tl.vis !== warm) {
-        tl.vis = warm; tl.b.style.opacity = warm ? .001 : 0;
-        tl.b.style.transform = `translate3d(${(G.rose[0] - G.tile / 2).toFixed(1)}px,${(G.rose[1] - G.tile * 1.17 / 2).toFixed(1)}px,0) scale(.15)`;
+      /* a few seconds early they are painted once, invisibly, inside the flower, so the drop never waits for a decode */
+      const warmUp = t > HUSH - 1.5 ? 2 : 0;
+      if (tl.vis !== warmUp) {
+        tl.vis = warmUp; tl.b.style.opacity = warmUp ? .001 : 0;
+        tl.b.style.transform = `translate3d(${(sx - G.tile / 2).toFixed(1)}px,${(sy - G.tile * 1.17 / 2).toFixed(1)}px,0) scale(.15)`;
       }
       return;
     }
     const p = span(t, launch, land);
-    if (p >= 1) landed++;
-    const [sx, sy] = G.rose;
-    const x = lerp(sx, slot.x, eo(p)), y = lerp(sy, slot.y, eo(p)) - Math.sin(Math.PI * p) * G.u * 4;
-    const sc = lerp(.15, 1, eback(p)), rot = lerp(tl.spin, slot.rot, eo(p));
-    tl.b.style.transform = `translate3d(${(x - G.tile / 2).toFixed(1)}px,${(y - G.tile * 1.17 / 2).toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg) scale(${sc.toFixed(3)})`;
+    const pos = q => [lerp(sx, slot.x, eo(q)), lerp(sy, slot.y, eo(q)) - Math.sin(Math.PI * q) * G.u * 5];
+    const [x, y] = pos(p);
+    if (p < 1) { const tr = []; for (let j = 1; j <= 7; j++) { const q = p - j * .035; if (q > 0) tr.push(pos(q)); } trails.push(tr); }
+    const scl = lerp(.15, 1, eback(p)), rot = lerp(tl.spin, slot.rot, eo(p));
+    tl.b.style.transform = `translate3d(${(x - G.tile / 2).toFixed(1)}px,${(y - G.tile * 1.17 / 2).toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg) scale(${scl.toFixed(3)})`;
     if (tl.vis !== 1) { tl.b.style.opacity = 1; tl.vis = 1; }
+    /* a gleam runs across the photos, left to right, when the heart closes */
+    const g0 = WHOLE + .05 + (slot.x / W) * .45, gp = span(t, g0, g0 + .85);
+    const gv = gp > 0 && gp < 1 ? (130 - 160 * gp).toFixed(1) + '%' : '130%';
+    if (tl.gleam !== gv) { tl.gleam = gv; tl.b.style.setProperty('--sh', gv); }
   });
-  if (landed !== lastTiles) { lastTiles = landed; }
 
   /* --- words --- */
   for (const c of cues) {
     const on = t >= c.a && t < c.b;
     if (on !== c.on) { c.on = on; c.el.classList.toggle('on', on); }
   }
-  drawFx(t);
+  drawFx(t, now, flower, trails);
+}
+
+/* rings: the bloom's four beats, the drop, the heart closing */
+function seedRipples() {
+  const at = () => lastFlower;
+  ripples = [
+    ...BLOOM.map((b, i) => ({ t0: b, d: 1.1, at, r0: G.R * .4, r1: G.R * (2.4 + i * .35), w: 2.4, a: .45, col: '#d8233b' })),
+    { t0: DROP, d: 1.2, at: () => G.fc, r0: G.u * 2, r1: G.u * 26, w: 4, a: .55, col: '#e0283f' },
+    { t0: DROP + .12, d: 1.4, at: () => G.fc, r0: G.u * 2, r1: G.u * 34, w: 2, a: .35, col: '#f0c56a' },
+    { t0: WHOLE, d: 1.3, at: () => G.fc, r0: G.u * 4, r1: G.u * 30, w: 3, a: .5, col: '#f0c56a' }
+  ];
 }
 
 /* words arrive one by one, an eighth or a sixteenth apart */
@@ -528,7 +651,7 @@ function clock(now) {
 const fin = $('#fin');
 function frame(now) {
   const t = clock(now);
-  render(t);
+  render(t, now);
   if (t >= END && !finished) { finished = true; fin.classList.add('show'); stage.classList.add('done'); }
   requestAnimationFrame(frame);
 }
@@ -568,24 +691,24 @@ resume.addEventListener('click', () => { song.play().then(() => { resume.hidden 
 document.addEventListener('visibilitychange', () => { if (!document.hidden && wantSound && mode === 'song' && song.paused && !finished) song.play().catch(() => { resume.hidden = false; }); });
 
 /* ================= gate ================= */
-const gate = $('#gate'), bow = $('#bow'), msg = $('#gateMsg'), barEl = $('#gateBar');
+const gate = $('#gate'), bowBtn = $('#bow'), msg = $('#gateMsg'), barEl = $('#gateBar');
 async function prepare() {
   let done = 0;
   const total = tiles.length + 2;
-  const tick = () => { done++; barEl.style.width = `${Math.round(done / total * 100)}%`; };
-  const photos = Promise.all(tiles.map(tl => fetchImg(tl.src).then(src => { tl.img.src = src; tl.img.classList.add('ok'); tick(); })));
+  const step = () => { done++; barEl.style.width = `${Math.round(done / total * 100)}%`; };
+  const photos = Promise.all(tiles.map(tl => fetchImg(tl.src).then(src => { tl.img.src = src; tl.img.classList.add('ok'); step(); })));
   const fonts = Promise.race([
     Promise.all([document.fonts.load('italic 400 20px Fraunces'), document.fonts.load('700 14px Manrope')]).catch(() => {}),
     new Promise(r => setTimeout(r, 4000))
-  ]).then(tick);
-  const sound = loadSong().then(tick);
+  ]).then(step);
+  const sound = loadSong().then(step);
   /* the song and the words are needed to begin; photos get until the drop, but we wait up to 12 s for them here */
   await Promise.all([sound, fonts]);
   await Promise.race([photos, new Promise(r => setTimeout(r, 12000))]);
   barEl.style.width = '100%';
   gate.classList.add('ready');
   msg.textContent = 'Lentani yechish uchun bosing';
-  bow.disabled = false;
+  bowBtn.disabled = false;
 }
 function openGate() {
   if (gate.classList.contains('open')) return;
@@ -594,8 +717,8 @@ function openGate() {
   setTimeout(() => gate.classList.add('gone'), 2200);
   tiles.forEach(tl => { const i = new Image(); i.src = tl.big; });      // the larger versions, for later
 }
-bow.addEventListener('click', openGate);
-gate.addEventListener('click', e => { if (!bow.disabled && e.target !== bow && !bow.contains(e.target)) openGate(); });
+bowBtn.addEventListener('click', openGate);
+gate.addEventListener('click', e => { if (!bowBtn.disabled && e.target !== bowBtn && !bowBtn.contains(e.target)) openGate(); });
 
 $('#again').addEventListener('click', () => {
   finished = false; fin.classList.remove('show'); stage.classList.remove('done');
@@ -614,14 +737,14 @@ lb.addEventListener('click', () => { lb.classList.remove('on'); setTimeout(() =>
 
 /* ================= go ================= */
 let rz;
-addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 120); });
-layout();
+addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { layout(); seedRipples(); }, 120); });
+layout(); seedRipples();
 if (AT != null) {
   gate.classList.add('gone');
   tiles.forEach(tl => fetchImg(tl.src).then(src => { tl.img.src = src; tl.img.classList.add('ok'); }));
   freeBase = AT; freeAt = performance.now(); mode = RUN ? 'free' : 'frozen';
   if (AT >= END) { finished = true; fin.classList.add('show'); stage.classList.add('done'); }
 } else prepare();
-requestAnimationFrame(frame);
+requestAnimationFrame(function first(now) { lastNow = now; frame(now); });
 window.__gul = { get G() { return G; }, get t() { return clock(performance.now()); }, get mode() { return mode; }, freeze(t) { mode = 'frozen'; freeBase = t; }, DROP, WHOLE, END, bar, beatAt };
 })();

@@ -29,6 +29,8 @@ p{margin:0}
 .ink{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:1}
 .glow{position:absolute;left:0;top:0;width:10px;height:10px;border-radius:50%;pointer-events:none;opacity:0;z-index:0;
   background:radial-gradient(closest-side,rgba(246,170,186,.75),rgba(246,182,194,.32) 55%,rgba(248,200,208,0));will-change:transform,opacity}
+.blob,.splash{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;opacity:0;z-index:0;will-change:transform,opacity}
+.splash{background:radial-gradient(closest-side,rgba(226,52,72,.5),rgba(236,96,112,.26) 45%,rgba(246,170,180,.1) 72%,rgba(248,200,208,0))}
 .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
 .flash{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:6;background:radial-gradient(70% 55% at 50% 42%,#fff 0%,rgba(255,252,247,.94) 45%,rgba(255,246,240,.6) 100%)}
 
@@ -36,7 +38,8 @@ p{margin:0}
 .heart{position:absolute;inset:0;z-index:3;will-change:transform;pointer-events:none}
 .ph{position:absolute;left:0;top:0;display:block;width:var(--tw,64px);height:calc(var(--tw,64px)*1.17);background:#fffdf8;border-radius:3px;opacity:0;
   box-shadow:0 1px 1px rgba(60,25,30,.12),0 10px 22px -10px rgba(70,25,35,.55);will-change:transform,opacity;pointer-events:none;transform-origin:50% 50%}
-.ph::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(255,255,255,.35),rgba(255,255,255,0) 40%);pointer-events:none}
+.ph::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
+  background:linear-gradient(112deg,transparent 38%,rgba(255,255,255,.85) 50%,transparent 62%) var(--sh,130%) 0/320% 100% no-repeat,linear-gradient(135deg,rgba(255,255,255,.35),rgba(255,255,255,0) 40%)}
 .ph img{position:absolute;left:6%;top:5.2%;width:88%;height:75.5%;object-fit:cover;border-radius:1px;background:linear-gradient(110deg,#efe2d6 30%,#f8eee6 50%,#efe2d6 70%) 0 0/300% 100%;animation:wait 1.4s linear infinite}
 .ph img.ok{animation:none;background:#eadccf}
 @keyframes wait{to{background-position:-300% 0}}
