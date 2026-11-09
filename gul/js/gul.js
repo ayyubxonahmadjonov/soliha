@@ -43,8 +43,6 @@ function pulse(t) {
 /* a softer tick for the quiet half: just the beat, no dub */
 const tick = t => { const d = t - beatAt(Math.floor((t - B0) / BEAT)); return Math.exp(-d / .16); };
 
-/* how far the phone is tilted, -1..1 on each axis, as last read and as eased toward */
-let tiltX = 0, tiltY = 0, tiltTX = 0, tiltTY = 0;
 const puffs = [];                                                    // petals that puff out when the tulips are touched
 
 const PAPER = '#f8f1e7', INK = '#5a4943', LEAF = '#6f8f5f', LEAF2 = '#4d6a45', STEM = '#55744b';
@@ -347,7 +345,7 @@ const tiles = PHOTOS.map((name, i) => {
   const img = new Image(); img.alt = ''; img.decoding = 'async';
   b.appendChild(img); heartEl.appendChild(b);
   b.style.zIndex = i;
-  return { b, img, name, src: `assets/img/${name}.webp?v=2`, big: `assets/img/${name}-big.webp?v=2`, spin: (i % 2 ? 1 : -1) * (120 + (i * 37) % 140), vis: -1, z: ((i * 7) % 5) * 9 };
+  return { b, img, name, src: `assets/img/${name}.webp?v=2`, big: `assets/img/${name}-big.webp?v=2`, spin: (i % 2 ? 1 : -1) * (120 + (i * 37) % 140), vis: -1 };
 });
 
 /* An image is only handed to a tile once it has really arrived; until then it keeps trying, quietly. */
@@ -406,8 +404,6 @@ const penRnd = mulberry(7);
 function drawFx(t, now, flower, trails) {
   cx.setTransform(DPR, 0, 0, DPR, 0, 0);
   cx.clearRect(0, 0, W, H);
-  const lean = (k, ky = k) => cx.setTransform(DPR, 0, 0, DPR, DPR * tiltX * k, DPR * tiltY * ky);
-  lean(4, 3);
   const [ox, oy] = G.fc;
   const sc = G.m / 420;
 
@@ -437,7 +433,6 @@ function drawFx(t, now, flower, trails) {
   }
 
   /* the drop: the tulip bursts; then petals keep falling */
-  lean(18, 13);
   const K = 2.3, g = 270 * sc;
   for (const p of bursts) {
     const dt = t - p.t0; if (dt < 0 || dt > p.life + 1) continue;
@@ -464,7 +459,6 @@ function drawFx(t, now, flower, trails) {
   }
 
   /* her name: falling petals are caught one by one, left to right, as if written; a glint runs along it, and it beats with the heart */
-  lean(12, 9);
   const N0 = bar(13);
   if (t > N0 - 1) for (const n of G.name) {
     const ts = N0 - .65 + n.lead, ta = N0 + .35 + n.f * 1.25 + n.lead * .4;
@@ -480,7 +474,6 @@ function drawFx(t, now, flower, trails) {
   }
 
   /* photos leave a short glittering wake */
-  lean(14, 10);
   for (const tr of trails) for (let j = 0; j < tr.length; j++) star(tr[j][0], tr[j][1], 1.6 * (1 - j / tr.length) + .3, j % 2 ? '#fff' : '#f0c56a', .75 * (1 - j / tr.length));
 
   /* sparks where each photo lands, and around the whole heart when it closes */
@@ -491,7 +484,6 @@ function drawFx(t, now, flower, trails) {
   }
 
   /* the nib's sparks (real time, not song time: they are only decoration) */
-  lean(9, 7);
   const dt = Math.min(.05, Math.max(0, (now - lastNow) / 1000)); lastNow = now;
   for (const pn of pens) {
     if (t < pn.a || t > pn.b || !pn.el.isConnected) continue;
@@ -608,15 +600,11 @@ function render(t, now) {
     if (t < WHOLE) pens.push({ el: f.parts[0].e, a: st, b: st + 1.1, ease: eio });
   }
 
-  /* --- tilt: far things move least, the photos turn in 3D, petals drift the most --- */
-  tiltX += (tiltTX - tiltX) * .1; tiltY += (tiltTY - tiltY) * .1;
-  svg.style.transform = `translate3d(${f2(tiltX * 9)}px,${f2(tiltY * 7)}px,0)`;
-
   /* --- the room --- */
   /* watercolour washes drift all the time, warm up as the tulip turns red, and gather behind the heart */
   const warm = t < bar(4) ? .55 : t < DROP ? .55 + .35 * span(t, bar(4), bar(5)) : .8;
   blobs.forEach((b, i) => {
-    const dx = Math.sin(t * .11 + i * 2) * 40 - tiltX * (26 + i * 10), dy = Math.cos(t * .09 + i) * 30 - tiltY * (20 + i * 8), sc2 = 1 + .06 * Math.sin(t * .2 + i) + (t >= DROP ? .05 * pulse(t) : 0);
+    const dx = Math.sin(t * .11 + i * 2) * 40, dy = Math.cos(t * .09 + i) * 30, sc2 = 1 + .06 * Math.sin(t * .2 + i) + (t >= DROP ? .05 * pulse(t) : 0);
     b.style.transform = `translate(${(+b.dataset.x + dx).toFixed(1)}px,${(+b.dataset.y + dy).toFixed(1)}px) scale(${sc2.toFixed(3)})`;
     b.style.opacity = (warm * (t < .4 ? t / .4 : 1)).toFixed(3);
   });
@@ -639,7 +627,7 @@ function render(t, now) {
   glow.style.width = glow.style.height = `${gs.toFixed(1)}px`;
 
   /* --- the heart: photos leave the tulip in pairs, one pair every half beat, and close on the downbeat --- */
-  heartEl.style.transform = `perspective(1100px) translate3d(${f2(tiltX * 14)}px,${f2(tiltY * 10)}px,0) rotateY(${f2(tiltX * 10)}deg) rotateX(${f2(-tiltY * 8)}deg) scale(${(t >= DROP ? 1 + (t >= WHOLE ? .04 : .015) * pulse(t) : 1).toFixed(4)})`;
+  heartEl.style.transform = `scale(${(t >= DROP ? 1 + (t >= WHOLE ? .04 : .015) * pulse(t) : 1).toFixed(4)})`;
   const trails = [];
   const [sx, sy] = G.fc;
   tiles.forEach((tl, i) => {
@@ -658,7 +646,7 @@ function render(t, now) {
     const [x, y] = pos(p);
     if (p < 1) { const tr = []; for (let j = 1; j <= 7; j++) { const q = p - j * .035; if (q > 0) tr.push(pos(q)); } trails.push(tr); }
     const scl = lerp(.15, 1, eback(p)), rot = lerp(tl.spin, slot.rot, eo(p));
-    tl.b.style.transform = `translate3d(${(x - G.tile / 2).toFixed(1)}px,${(y - G.tile * 1.17 / 2).toFixed(1)}px,${tl.z * p}px) rotate(${rot.toFixed(2)}deg) scale(${scl.toFixed(3)})`;
+    tl.b.style.transform = `translate3d(${(x - G.tile / 2).toFixed(1)}px,${(y - G.tile * 1.17 / 2).toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg) scale(${scl.toFixed(3)})`;
     if (tl.vis !== 1) { tl.b.style.opacity = 1; tl.vis = 1; }
     /* a gleam runs across the photos, left to right, when the heart closes */
     const g0 = WHOLE + .05 + (slot.x / W) * .45, gp = span(t, g0, g0 + .85);
@@ -836,43 +824,17 @@ async function prepare() {
   msg.textContent = 'Lentani yechish uchun bosing';
   bowBtn.disabled = false;
 }
-let started = false, asking = false;
-const askMotion = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
-function onGateTap() {
-  if (bowBtn.disabled || started || asking) return;
-  if (!askMotion) { listenTilt(); openGate(); return; }
-  asking = true;
-  let perm;
-  try { perm = DeviceOrientationEvent.requestPermission(); } catch (e) { perm = Promise.resolve('denied'); }
-  /* the song is started and stopped inside this same tap, so the phone lets it play once the question is answered */
-  try { const p = song.play(); if (p && p.then) p.then(() => { if (!started) { song.pause(); try { song.currentTime = 0; } catch (e) {} } }, () => {}); } catch (e) {}
-  Promise.resolve(perm).then(r => { if (r === 'granted') listenTilt(); }, () => {}).then(() => { asking = false; openGate(); });
-}
+let started = false;
 function openGate() {
-  if (started) return;
+  if (bowBtn.disabled || started) return;
   started = true;
   play(0);
   gate.classList.add('open');
   setTimeout(() => gate.classList.add('gone'), 2200);
   tiles.forEach(tl => { const i = new Image(); i.src = tl.big; });      // the larger versions, for later
 }
-bowBtn.addEventListener('click', onGateTap);
-gate.addEventListener('click', e => { if (e.target !== bowBtn && !bowBtn.contains(e.target)) onGateTap(); });
-
-/* ================= tilt ================= */
-let tilting = false, rest = null;
-function onOrient(e) {
-  if (e.beta == null || e.gamma == null) return;
-  const a = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-  let x = e.gamma, y = e.beta;
-  if (a === 90) { x = e.beta; y = -e.gamma; } else if (a === -90 || a === 270) { x = -e.beta; y = e.gamma; } else if (a === 180) { x = -e.gamma; y = -e.beta; }
-  if (!rest) rest = [x, y];
-  rest[0] += (x - rest[0]) * .005; rest[1] += (y - rest[1]) * .005;    // however she holds it becomes, slowly, the middle
-  tiltTX = cl((x - rest[0]) / 20, -1, 1); tiltTY = cl((y - rest[1]) / 20, -1, 1);
-}
-function listenTilt() { if (tilting || RENDER) return; tilting = true; addEventListener('deviceorientation', onOrient); }
-if (!RENDER && matchMedia('(hover: hover) and (pointer: fine)').matches)
-  addEventListener('pointermove', e => { tiltTX = (e.clientX / W - .5) * 1.1; tiltTY = (e.clientY / H - .5) * 1.1; });
+bowBtn.addEventListener('click', openGate);
+gate.addEventListener('click', e => { if (e.target !== bowBtn && !bowBtn.contains(e.target)) openGate(); });
 
 /* ================= the tulips answer a touch ================= */
 tapEl.querySelector('input').addEventListener('change', () => {
