@@ -835,6 +835,8 @@ function openGate() {
 }
 bowBtn.addEventListener('click', openGate);
 gate.addEventListener('click', e => { if (e.target !== bowBtn && !bowBtn.contains(e.target)) openGate(); });
+/* a press held a little too long never becomes a click on an iPhone; lifting the finger still counts as the tap that lets sound play */
+gate.addEventListener('touchend', openGate);
 
 /* ================= the tulips answer a touch ================= */
 tapEl.querySelector('input').addEventListener('change', () => {
