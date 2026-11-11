@@ -91,16 +91,24 @@ p,dl,dd,dt{margin:0}
 .art__new{position:absolute;right:calc(var(--u)*1.5);top:calc(var(--u)*1.5);width:calc(var(--u)*17);height:calc(var(--u)*17);display:grid;place-items:center;transform:rotate(12deg);color:#fff;font:700 calc(var(--u)*4.2)/1 var(--sans);letter-spacing:.02em;background:var(--red);
   clip-path:polygon(50% 0,58% 11%,70% 4%,72% 17%,85% 15%,80% 27%,93% 31%,84% 40%,93% 50%,84% 60%,93% 69%,80% 73%,85% 85%,72% 83%,70% 96%,58% 89%,50% 100%,42% 89%,30% 96%,28% 83%,15% 85%,20% 73%,7% 69%,16% 60%,7% 50%,16% 40%,7% 31%,20% 27%,15% 15%,28% 17%,30% 4%,42% 11%)}
 .art__mid{position:absolute;left:0;right:0;top:26%;height:54%;background:linear-gradient(#fff,#fbeee0)}
-.art__splash{position:absolute;left:-8%;top:-6%;width:118%;height:112%;pointer-events:none;
-  background:radial-gradient(closest-side at 42% 46%,#fff 30%,rgba(255,255,255,0) 100%),radial-gradient(closest-side at 76% 30%,rgba(255,255,255,.9) 20%,rgba(255,255,255,0) 60%)}
+.art__splash{position:absolute;left:-8%;top:-4%;width:118%;height:110%;pointer-events:none;
+  background:radial-gradient(closest-side at 44% 48%,#fff 36%,rgba(255,255,255,0) 100%)}
+/* a splash of milk under the chocolate — the Kinder signature */
+.art__milk{position:absolute;right:-5%;bottom:-7%;width:72%;height:64%;pointer-events:none;
+  background:radial-gradient(closest-side at 52% 62%,#fff 60%,rgba(255,255,255,0) 62%),radial-gradient(closest-side at 87% 42%,#fff 42%,rgba(255,255,255,0) 44%),radial-gradient(closest-side at 20% 80%,#fff 30%,rgba(255,255,255,0) 32%),radial-gradient(closest-side at 72% 94%,#fff 24%,rgba(255,255,255,0) 26%);
+  filter:drop-shadow(0 calc(var(--u)*.5) calc(var(--u)*.8) rgba(150,100,50,.14))}
 .art__photo{position:absolute;left:12%;top:5%;width:62%;aspect-ratio:3/4;border:calc(var(--u)*1.7) solid #fff;border-radius:calc(var(--u)*3);overflow:hidden;transform:rotate(-3.5deg);background:#eadccf;
   box-shadow:0 calc(var(--u)*2.4) calc(var(--u)*4) calc(var(--u)*-2) rgba(60,25,10,.5),0 0 0 calc(var(--u)*.4) rgba(226,0,26,.08)}
 .art__photo img{display:block;width:100%;height:100%;object-fit:cover}
-.art__bar{position:absolute;right:5%;bottom:3%;width:33%;aspect-ratio:1/1.55;border-radius:calc(var(--u)*2.2);transform:rotate(14deg);
-  background:linear-gradient(145deg,#7a4425,#4b2413 45%,#3a1a0d);box-shadow:inset calc(var(--u)*.3) calc(var(--u)*.3) calc(var(--u)*.6) rgba(255,230,200,.25),inset calc(var(--u)*-.4) calc(var(--u)*-.4) calc(var(--u)*.8) rgba(0,0,0,.5),0 calc(var(--u)*2) calc(var(--u)*3) calc(var(--u)*-1.5) rgba(40,15,5,.7)}
-.art__bar::before{content:"";position:absolute;inset:7%;border-radius:calc(var(--u)*1.4);
-  background:repeating-linear-gradient(0deg,transparent 0 22%,rgba(0,0,0,.35) 22% 25%),repeating-linear-gradient(90deg,transparent 0 46%,rgba(0,0,0,.35) 46% 50%)}
-.art__bar::after{content:"";position:absolute;left:12%;top:8%;width:30%;height:40%;border-radius:40%;background:linear-gradient(rgba(255,250,240,.35),rgba(255,250,240,0));transform:rotate(-20deg)}
+/* the chocolate bar: molded squares, with the top row broken off to show the milk cream inside */
+.art__bar{position:absolute;right:4%;bottom:2.5%;width:35%;aspect-ratio:1/1.5;border-radius:calc(var(--u)*2);transform:rotate(13deg);
+  background:linear-gradient(150deg,#73411f,#49250f 52%,#331708);
+  background-image:repeating-linear-gradient(0deg,transparent 0 30%,rgba(0,0,0,.34) 30% 33.5%),repeating-linear-gradient(90deg,transparent 0 46%,rgba(0,0,0,.34) 46% 50%);
+  box-shadow:inset calc(var(--u)*.25) calc(var(--u)*.25) calc(var(--u)*.6) rgba(255,228,196,.3),inset calc(var(--u)*-.35) calc(var(--u)*-.45) calc(var(--u)*.9) rgba(0,0,0,.55),0 calc(var(--u)*2) calc(var(--u)*3) calc(var(--u)*-1.4) rgba(40,15,5,.75)}
+.art__bar::after{content:"";position:absolute;left:14%;top:12%;width:24%;height:30%;border-radius:40%;background:linear-gradient(rgba(255,245,228,.38),rgba(255,245,228,0));transform:rotate(-20deg)}
+.art__bar-break{position:absolute;left:-7%;right:-7%;top:-10%;height:42%;transform:rotate(-7deg);border-radius:calc(var(--u)*.8);
+  background:linear-gradient(165deg,#fffaf0,#ffe8ca);box-shadow:inset 0 calc(var(--u)*-.4) calc(var(--u)*.55) rgba(150,90,40,.3),0 calc(var(--u)*.2) calc(var(--u)*.3) rgba(0,0,0,.18);
+  clip-path:polygon(0 36%,20% 4%,45% 28%,72% 6%,100% 32%,100% 100%,0 100%)}
 .art__badge{position:absolute;left:5%;bottom:1%;width:calc(var(--u)*23);height:calc(var(--u)*23);border-radius:50%;background:var(--red);color:#fff;display:grid;place-content:center;text-align:center;
   font:700 calc(var(--u)*10)/1 var(--sans);letter-spacing:-.04em;box-shadow:0 0 0 calc(var(--u)*.2) #fff,0 0 0 calc(var(--u)*.55) var(--red),0 calc(var(--u)*1) calc(var(--u)*2) calc(var(--u)*-.8) rgba(0,0,0,.5);transform:rotate(-8deg)}
 .art__badge small{display:block;font-size:.3em;letter-spacing:.12em;text-transform:uppercase;margin-top:.1em}

@@ -14,9 +14,10 @@ const beatAt = k => B0 + k * BEAT;
 const bar = n => beatAt(4 * n);                                     // one bar = two seconds; the hook repeats every two bars
 const DROP = B0, REVEAL = 1.6;
 const PIECE = k => DROP + k * 2 * BEAT;                              // a piece snaps off on every beat of the hook, eight in a row
-const GATHER = bar(5), TITLE = bar(6), TITLE2 = bar(7), BURST = bar(8), END = bar(11);
+/* the back half is spaced so each line can be read: pieces 8.2-15.2, a line to read 14-19, then the box, title and burst */
+const GATHER = beatAt(22), TITLE = beatAt(27), TITLE2 = beatAt(31), BURST = beatAt(27), END = beatAt(44);
 const CLIP = 33;
-const TOKENS = { wa: 2.2, wa2: 4.0, drop: DROP, wb: PIECE(1) + .3, wc: bar(4), wc2: bar(4) + 2 * BEAT, gather: GATHER, wt: TITLE, wt2b: TITLE + .5, wt2: TITLE2, never: Infinity };
+const TOKENS = { wa: 2.0, wa2: 4.0, drop: DROP, wb: PIECE(1) + .3, wc: 14.0, wc2: 15.0, gather: GATHER, wt: TITLE, wt2b: TITLE + .5, wt2: TITLE2, never: Infinity };
 const timeOf = (tok, out) => (tok in TOKENS ? TOKENS[tok] : parseFloat(tok)) - (out ? .3 : 0);
 
 /* ---- little maths ---- */
@@ -38,7 +39,7 @@ function pulse(t) {
 
 /* ================= the wrapper's artwork ================= */
 const ART = `<span class="art__top"><span class="art__new">Yangi!</span><b class="art__logo">Soliha</b><span class="art__kind">shokolad</span></span>` +
-  `<span class="art__mid"><i class="art__splash"></i><span class="art__photo"><img src="assets/img/wrap.webp?v=1" alt=""></span><i class="art__bar"></i><span class="art__badge">8<small>bo‘lak</small></span></span>` +
+  `<span class="art__mid"><i class="art__splash"></i><i class="art__milk"></i><span class="art__photo"><img src="assets/img/wrap.webp?v=2" alt=""></span><span class="art__bar"><i class="art__bar-break"></i></span><span class="art__badge">8<small>bo‘lak</small></span></span>` +
   `<span class="art__low"><span class="art__tag">shirinlik bilan</span><span class="art__fine">Tarkibi: shirinlik, bir chimdim hazil, ko‘p kulgi. Saqlash muddati: cheksiz.</span></span>`;
 document.querySelectorAll('.art').forEach(a => { a.innerHTML = ART; });
 
@@ -104,7 +105,7 @@ function layout() {
 
 /* ================= the pieces ================= */
 /* row by row: a bite, a dessert, a close look, a selfie, eighteen, flowers, headphones, a white dress */
-const PHOTOS = ['bite', 'eclair', 'closeup', 'selfie', 'eighteen', 'flowers', 'quyoncha', 'hero'];
+const PHOTOS = ['c', 'a', 'd', 'e', 'f', 'b', 'h', 'g'];
 const pieces = PHOTOS.map((name, i) => {
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'pc'; b.setAttribute('aria-label', 'Rasmni kattalashtirish');
@@ -403,7 +404,7 @@ async function prepare() {
   const total = pieces.length + 3;
   const step = () => { done++; barEl.style.width = `${Math.round(done / total * 100)}%`; };
   const photos = Promise.all(pieces.map(pc => fetchImg(pc.src).then(src => { pc.img.src = src; pc.img.classList.add('ok'); step(); })));
-  const cover = fetchImg('assets/img/wrap.webp?v=1').then(step);
+  const cover = fetchImg('assets/img/wrap.webp?v=2').then(step);
   const fonts = Promise.race([
     Promise.all([document.fonts.load('italic 400 20px Fraunces'), document.fonts.load('700 14px Manrope')]).catch(() => {}),
     new Promise(r => setTimeout(r, 4000))
@@ -455,7 +456,7 @@ async function makeWallpaper() {
   const g = c.getContext('2d'); g.scale(S, S);
   const bg = g.createLinearGradient(0, 0, 0, LH); bg.addColorStop(0, '#fdf6ec'); bg.addColorStop(1, '#eedcc6');
   g.fillStyle = bg; g.fillRect(0, 0, LW, LH);
-  const wrap = await loadImage(pieces[0].img.src ? 'assets/img/wrap-big.webp?v=1' : 'assets/img/wrap.webp?v=1').catch(() => null);
+  const wrap = await loadImage(pieces[0].img.src ? 'assets/img/wrap-big.webp?v=2' : 'assets/img/wrap.webp?v=2').catch(() => null);
   /* the box front, below where the lock-screen clock sits */
   const bw = 236, bh = bw / .515, bx = (LW - bw) / 2, by = 214;
   g.save(); g.shadowColor = 'rgba(40,15,5,.35)'; g.shadowBlur = 30; g.shadowOffsetY = 16; g.fillStyle = '#fff'; rrect(g, bx, by, bw, bh, 6); g.fill(); g.restore();
