@@ -38,8 +38,8 @@ function pulse(t) {
 }
 
 /* ================= the wrapper's artwork: the real box, with her on it ================= */
-const PACK_ART = 'assets/img/pack.webp?v=2';
-const PACK_AR = 1456 / 770;                                     // the box front's width over its height
+const PACK_ART = 'assets/img/pack.webp?v=3';
+const PACK_AR = 1792 / 1064;                                    // the box front's width over its height
 document.querySelectorAll('.art').forEach(a => { a.style.background = `#fff url(${PACK_ART}) center/100% 100% no-repeat`; });
 
 /* ================= layout ================= */
