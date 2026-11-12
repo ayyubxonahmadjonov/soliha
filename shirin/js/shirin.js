@@ -37,11 +37,10 @@ function pulse(t) {
   return (k % 4 === 0 ? 1 : .6) * Math.exp(-d / .1);
 }
 
-/* ================= the wrapper's artwork ================= */
-const ART = `<span class="art__top"><span class="art__new">Yangi!</span><b class="art__logo">Soliha</b><span class="art__kind">shokolad</span></span>` +
-  `<span class="art__mid"><i class="art__splash"></i><i class="art__milk"></i><span class="art__photo"><img src="assets/img/wrap.webp?v=2" alt=""></span><span class="art__bar"><i class="art__bar-break"></i></span><span class="art__badge">8<small>bo‘lak</small></span></span>` +
-  `<span class="art__low"><span class="art__tag">shirinlik bilan</span><span class="art__fine">Tarkibi: shirinlik, bir chimdim hazil, ko‘p kulgi. Saqlash muddati: cheksiz.</span></span>`;
-document.querySelectorAll('.art').forEach(a => { a.innerHTML = ART; });
+/* ================= the wrapper's artwork: the real box, with her on it ================= */
+const PACK_ART = 'assets/img/pack.webp?v=2';
+const PACK_AR = 1456 / 770;                                     // the box front's width over its height
+document.querySelectorAll('.art').forEach(a => { a.style.background = `#fff url(${PACK_ART}) center/100% 100% no-repeat`; });
 
 /* ================= layout ================= */
 const stage = $('#stage'), slab = $('#slab'), piecesEl = $('#pieces'), box = $('#box'), boxIn = $('#boxIn'), glow = $('#glow'), flash = $('#flash'), drips = $('#drips');
@@ -83,16 +82,16 @@ function layout() {
   const sayTop = Math.max(H * .145, 60) + sf.t;        // under the chocolate band and its shortest drips
   const titleBlock = Math.min(H * .17, 150), titleH = sayTop + titleBlock;
   const availH = stripTop - 18 - titleH;
-  const bh = Math.min(availH * .86, W * .66 / .515), bw = bh * .515, bd = bw * .32;
+  const bh = Math.min(availH * .9, W * .9 / PACK_AR), bw = bh * PACK_AR, bd = bh * .18;
   const bx = W / 2, by = titleH + availH / 2;
-  const pw = sw * 1.07, ph = sh * 1.07;
+  const pw = Math.min(W * .95, (H - sf.t - sf.b) * .62 * PACK_AR), ph = pw / PACK_AR;
   G = { ps, g, pad, sw, sh, sx, sy, cx, cy, slots, tw, strip, bw, bh, bd, bx, by, pw, ph, m: Math.min(W, H), sayTop, titleH };
   const rs = stage.style;
   rs.setProperty('--ps', `${ps}px`); rs.setProperty('--sw', `${f1(sw)}px`); rs.setProperty('--sh', `${f1(sh)}px`);
   rs.setProperty('--bw', `${f1(bw)}px`); rs.setProperty('--bh', `${f1(bh)}px`); rs.setProperty('--bd', `${f1(bd)}px`);
   rs.setProperty('--sayTop', `${f1(sayTop)}px`); rs.setProperty('--sayLow', `${f1(sy + sh + 14)}px`); rs.setProperty('--finTop', `${f1(stripBottom + 14)}px`);
   rs.setProperty('--subTop', `${f1(titleBlock * .76)}px`);
-  box.style.setProperty('--au', `${(bw / 100).toFixed(3)}px`);
+  box.style.setProperty('--au', `${(bh * .515 / 100).toFixed(3)}px`);
   box.style.transform = `translate(${f1(bx - bw / 2)}px,${f1(by - bh / 2)}px)`;
   piecesEl.style.fontSize = `${ps}px`;
   pack.style.width = `${f1(pw)}px`; pack.style.height = `${f1(ph)}px`;
@@ -401,16 +400,17 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && wa
 const msg = $('#gateMsg'), barEl = $('#gateBar');
 async function prepare() {
   let done = 0;
-  const total = pieces.length + 3;
+  const total = pieces.length + 4;
   const step = () => { done++; barEl.style.width = `${Math.round(done / total * 100)}%`; };
   const photos = Promise.all(pieces.map(pc => fetchImg(pc.src).then(src => { pc.img.src = src; pc.img.classList.add('ok'); step(); })));
   const cover = fetchImg('assets/img/wrap.webp?v=2').then(step);
+  const packArt = fetchImg(PACK_ART).then(step);
   const fonts = Promise.race([
     Promise.all([document.fonts.load('italic 400 20px Fraunces'), document.fonts.load('700 14px Manrope')]).catch(() => {}),
     new Promise(r => setTimeout(r, 4000))
   ]).then(step);
   const sound = loadSong().then(step);
-  await Promise.all([sound, fonts, cover]);
+  await Promise.all([sound, fonts, cover, packArt]);
   await Promise.race([photos, new Promise(r => setTimeout(r, 12000))]);
   barEl.style.width = '100%';
   gate.classList.add('ready');
@@ -456,29 +456,13 @@ async function makeWallpaper() {
   const g = c.getContext('2d'); g.scale(S, S);
   const bg = g.createLinearGradient(0, 0, 0, LH); bg.addColorStop(0, '#fdf6ec'); bg.addColorStop(1, '#eedcc6');
   g.fillStyle = bg; g.fillRect(0, 0, LW, LH);
-  const wrap = await loadImage(pieces[0].img.src ? 'assets/img/wrap-big.webp?v=2' : 'assets/img/wrap.webp?v=2').catch(() => null);
+  const packIm = await loadImage(PACK_ART).catch(() => null);
   /* the box front, below where the lock-screen clock sits */
-  const bw = 236, bh = bw / .515, bx = (LW - bw) / 2, by = 214;
+  const bw = 330, bh = bw / PACK_AR, bx = (LW - bw) / 2, by = 248;
   g.save(); g.shadowColor = 'rgba(40,15,5,.35)'; g.shadowBlur = 30; g.shadowOffsetY = 16; g.fillStyle = '#fff'; rrect(g, bx, by, bw, bh, 6); g.fill(); g.restore();
   g.save(); rrect(g, bx, by, bw, bh, 6); g.clip();
   g.fillStyle = '#fff'; g.fillRect(bx, by, bw, bh);
-  const u = bw / 100;
-  g.fillStyle = '#e2001a'; g.fillRect(bx, by + bh * .78, bw, bh * .22);
-  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(bx, by + bh * .78); for (let i = 0; i <= 20; i++) g.lineTo(bx + bw * i / 20, by + bh * .78 + 7 * u * .5 * (1 + Math.sin(i / 20 * Math.PI * 4))); g.lineTo(bx + bw, by + bh * .78); g.closePath(); g.fill();
-  g.save(); g.translate(bx + bw / 2, by + 16 * u); g.transform(1, 0, -.12, 1, 0, 0);
-  g.font = `italic 700 ${24 * u}px Manrope, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.lineWidth = 2.6 * u; g.strokeStyle = '#fff'; g.lineJoin = 'round'; g.strokeText('Soliha', 0, 0); g.fillStyle = '#e2001a'; g.fillText('Soliha', 0, 0); g.restore();
-  g.fillStyle = '#3b1d10'; g.font = `700 ${4.4 * u}px Manrope, sans-serif`; g.textAlign = 'center'; g.fillText('S H O K O L A D', bx + bw / 2, by + 32 * u);
-  const px = bx + bw * .12, py = by + bh * .26 + bh * .54 * .05, pw = bw * .62, ph = pw * 4 / 3;
-  g.save(); g.translate(px + pw / 2, py + ph / 2); g.rotate(-3.5 * Math.PI / 180);
-  g.shadowColor = 'rgba(60,25,10,.4)'; g.shadowBlur = 14; g.shadowOffsetY = 8; g.fillStyle = '#fff'; rrect(g, -pw / 2 - 2 * u, -ph / 2 - 2 * u, pw + 4 * u, ph + 4 * u, 4 * u); g.fill();
-  g.shadowColor = 'transparent'; rrect(g, -pw / 2, -ph / 2, pw, ph, 2.5 * u); g.clip();
-  if (wrap) { const r = Math.max(pw / wrap.width, ph / wrap.height); g.drawImage(wrap, -wrap.width * r / 2, -wrap.height * r / 2, wrap.width * r, wrap.height * r); }
-  g.restore();
-  g.fillStyle = '#e2001a'; g.beginPath(); g.arc(bx + bw * .17, by + bh * .77, 11 * u, 0, 6.3); g.fill();
-  g.strokeStyle = '#fff'; g.lineWidth = 1.2 * u; g.stroke();
-  g.fillStyle = '#fff'; g.font = `700 ${9 * u}px Manrope, sans-serif`; g.fillText('8', bx + bw * .17, by + bh * .77 - 1.5 * u); g.font = `700 ${2.6 * u}px Manrope, sans-serif`; g.fillText('BO‘LAK', bx + bw * .17, by + bh * .77 + 5.5 * u);
-  g.fillStyle = '#fff'; g.font = `italic 400 ${8 * u}px Fraunces, serif`; g.fillText('shirinlik bilan', bx + bw / 2, by + bh * .89);
+  if (packIm) g.drawImage(packIm, bx, by, bw, bh);
   g.restore();
   /* the eight pieces in a row of four, twice */
   const tw = 70, gap = 8, x0 = (LW - 4 * tw - 3 * gap) / 2, y0 = by + bh + 34;

@@ -160,6 +160,9 @@ p,dl,dd,dt{margin:0}
 
 /* ---------- the gate: the wrapper, torn open ---------- */
 .gate{position:fixed;inset:0;z-index:20;overflow:hidden}
+/* its own curtain, so the chocolate behind stays a surprise until the tear */
+.gate::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--grain),radial-gradient(140% 100% at 50% 38%,#fdf6ec 0%,var(--cream) 48%,var(--cream2) 100%);transition:opacity .9s ease .25s}
+.gate.open::before{opacity:0}
 .pack{position:absolute;left:0;top:0;width:var(--pw);height:var(--ph);perspective:1500px;transform-style:preserve-3d;display:block;-webkit-tap-highlight-color:transparent}
 .pack__shadow{position:absolute;left:4%;right:4%;top:6%;bottom:-2%;border-radius:4%;background:rgba(40,15,5,.5);filter:blur(16px);transform:translateY(3%);transition:opacity .6s ease .4s}
 .pack__part{position:absolute;inset:0;display:block;overflow:hidden;border-radius:2.2%/1.1%;background:#fff;clip-path:var(--clip)}
