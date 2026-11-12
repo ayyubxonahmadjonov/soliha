@@ -71,12 +71,15 @@ function layout() {
   const sw = 2 * ps + g + 2 * pad, sh = 4 * ps + 3 * g + 2 * pad;
   const cx = W / 2, cy = sf.t + (H - sf.t - sf.b) * .5 + (wide ? 0 : 18);
   const sx = cx - sw / 2, sy = cy - sh / 2;
-  /* inside: eight long bars in a stack; they land as bigger 3:4 photo cards in two columns over the same footprint */
-  const rh = (sh - 2 * pad) / 8, brl = sw - 2 * pad, brh = rh * .86;
+  /* inside: eight bars standing upright in an open tray, like the real box; they land as bigger 3:4 photo cards */
+  const rh = (sh - 2 * pad) / 8;
+  const trayW = Math.min(W * .92, 430), pad2 = trayW * .04, gp = trayW * .012;
+  const brh = (trayW - 2 * pad2 - 7 * gp) / 8, brl = brh * 4.35, trayH = brl + 2 * pad2;
+  const tx = { x: cx - trayW / 2, y: cy - trayH / 2 };
   const CH = rh * 2 * 1.45, CW = CH * .75;
   const slots = [], stack = [];
   for (let i = 0; i < 8; i++) {
-    stack.push({ x: cx, y: sy + pad + (i + .5) * rh });
+    stack.push({ x: tx.x + pad2 + i * (brh + gp) + brh / 2, y: cy });
     slots.push({ x: cx + (i % 2 ? 1 : -1) * (CW / 2 + g * .8), y: sy + pad + ((i >> 1) * 2 + 1) * rh });
   }
   /* two rows of four photos along the bottom, with the buttons under them */
@@ -91,9 +94,9 @@ function layout() {
   const bh = Math.min(availH * .9, W * .9 / PACK_AR), bw = bh * PACK_AR, bd = bh * .18;
   const bx = W / 2, by = titleH + availH / 2;
   const pw = Math.min(W * .95, (H - sf.t - sf.b) * .62 * PACK_AR), ph = pw / PACK_AR;
-  G = { ps, g, pad, sw, sh, sx, sy, cx, cy, slots, stack, brl, brh, cw: CW, ch: CH, tw, th, strip, bw, bh, bd, bx, by, pw, ph, m: Math.min(W, H), sayTop, titleH };
+  G = { ps, g, pad, sw, sh, sx, sy, cx, cy, tx, slots, stack, brl, brh, cw: CW, ch: CH, tw, th, strip, bw, bh, bd, bx, by, pw, ph, m: Math.min(W, H), sayTop, titleH };
   const rs = stage.style;
-  rs.setProperty('--ps', `${ps}px`); rs.setProperty('--sw', `${f1(sw)}px`); rs.setProperty('--sh', `${f1(sh)}px`);
+  rs.setProperty('--ps', `${ps}px`); rs.setProperty('--sw', `${f1(trayW)}px`); rs.setProperty('--sh', `${f1(trayH)}px`);
   rs.setProperty('--bw', `${f1(bw)}px`); rs.setProperty('--bh', `${f1(bh)}px`); rs.setProperty('--bd', `${f1(bd)}px`);
   rs.setProperty('--sayTop', `${f1(sayTop)}px`); rs.setProperty('--sayLow', `${f1(sy + sh + 14)}px`); rs.setProperty('--finTop', `${f1(stripBottom + 14)}px`);
   rs.setProperty('--subTop', `${f1(titleBlock * .76)}px`);
@@ -245,9 +248,9 @@ function render(t) {
   const beat = pulse(t);
 
   /* --- the bar: under the wrapper at first, then pulsing with the music, then shrinking away as the pieces leave --- */
-  const gone = eio(span(t, GATHER, GATHER + .8));
+  const gone = eio(span(t, PIECE(7) + 1.1, PIECE(7) + 2));
   slab.style.opacity = f2(1 - gone);
-  slab.style.transform = `translate(${f1(G.sx)}px,${f1(G.sy)}px) scale(${f2((1 + .018 * beat) * (1 - .35 * gone))})`;
+  slab.style.transform = `translate(${f1(G.tx.x)}px,${f1(G.tx.y)}px) scale(${f2((1 + .018 * beat) * (1 - .35 * gone))})`;
   const gl1 = span(t, REVEAL + .2, REVEAL + 1.3), gl2 = span(t, DROP, DROP + .8);
   const gl = gl2 > 0 && gl2 < 1 ? gl2 : gl1;
   slab.style.setProperty('--gl', `${(130 - 160 * (gl > 0 && gl < 1 ? gl : 1.01)).toFixed(1)}%`);
@@ -255,7 +258,7 @@ function render(t) {
   /* --- the pieces: each bar springs from the stack on its beat, flips mid-air, and lands as a bigger photo card --- */
   pieces.forEach((pc, i) => {
     const home = G.stack[i], slot = G.slots[i], t0 = PIECE(i);
-    let x = home.x, y = home.y, s = 1, rx = 0, ry = 0, rz = 0, crack = 0;
+    let x = home.x, y = home.y, s = 1, rx = 0, ry = 0, rz = 90, crack = 0;
     if (t < t0) s = 1 + .014 * beat;
     else {
       const a = span(t, t0, t0 + .5), b = span(t, t0 + .32, t0 + 1.02), p = eio(span(t, t0 + .12, t0 + 1.0));
@@ -265,7 +268,7 @@ function render(t) {
       s = 1 + .18 * hump;
       rx = 14 * hump;
       ry = 180 * eio(b);
-      rz = (i % 2 ? 7 : -7) * hump + JIT[i] * eio(b);
+      rz = lerp(90, JIT[i], eio(b)) + (i % 2 ? 7 : -7) * hump;
       crack = a > .06 && a < .55 ? Math.sin((a - .06) / .49 * Math.PI) : 0;
       if (b >= 1) { s = 1 + .012 * beat; rz = JIT[i]; }
     }
