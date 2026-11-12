@@ -43,16 +43,20 @@ p,dl,dd,dt{margin:0}
 .slab::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:linear-gradient(112deg,transparent 40%,rgba(255,245,230,.26) 50%,transparent 60%) var(--gl,130%) 0/320% 100% no-repeat}
 .pieces{position:absolute;inset:0;z-index:3;perspective:1100px;pointer-events:none}
-.pc{position:absolute;left:0;top:0;display:block;width:var(--ps);height:var(--ps);transform-style:preserve-3d;will-change:transform;pointer-events:none;opacity:0;z-index:1}
-.pc__f,.pc__b{position:absolute;inset:0;border-radius:12%;-webkit-backface-visibility:hidden;backface-visibility:hidden}
-.pc__f{background:linear-gradient(145deg,#7a4425 0%,#4b2413 38%,#3a1a0d 62%,#5b2f1b 100%);
-  box-shadow:inset 0 0 0 1px rgba(255,235,210,.07),inset .06em .06em .16em rgba(255,230,200,.28),inset -.07em -.08em .2em rgba(0,0,0,.55),0 .12em .3em -.1em rgba(0,0,0,.5)}
-.pc__f::before{content:"";position:absolute;inset:13%;border-radius:10%;
-  box-shadow:inset .05em .05em .12em rgba(0,0,0,.45),inset -.05em -.05em .12em rgba(255,230,200,.18);background:linear-gradient(145deg,rgba(0,0,0,.08),rgba(255,255,255,.04))}
-.pc__f::after{content:"S";position:absolute;inset:0;display:grid;place-items:center;font-family:var(--serif);font-style:italic;font-weight:500;font-size:.5em;line-height:1;color:rgba(255,232,205,.2);text-shadow:.02em .02em .02em rgba(0,0,0,.6),-.02em -.02em .02em rgba(255,240,220,.15)}
-.pc__crack{position:absolute;inset:-4%;border-radius:14%;pointer-events:none;opacity:0;
+.pc{position:absolute;left:0;top:0;display:block;width:var(--pcw);height:var(--pch);transform-style:preserve-3d;will-change:transform;pointer-events:none;opacity:0;z-index:1}
+/* the front: one long kinder bar — rounded ends, four molded segments, a soft hump of light along its back */
+.pc__f{position:absolute;inset:0;border-radius:.46em;-webkit-backface-visibility:hidden;backface-visibility:hidden;
+  background-image:repeating-linear-gradient(90deg,transparent 0 23.4%,rgba(0,0,0,.30) 23.4% 25%),linear-gradient(180deg,#86502a 0%,#6b3a1d 22%,#4b2412 58%,#31150a 100%);
+  box-shadow:inset 0 .09em .16em rgba(255,232,202,.33),inset 0 -.14em .22em rgba(0,0,0,.55),inset .14em 0 .2em rgba(255,230,200,.12),inset -.14em 0 .2em rgba(0,0,0,.32),0 .16em .34em -.1em rgba(0,0,0,.55)}
+.pc__f::before{content:"";position:absolute;left:4%;right:4%;top:10%;height:36%;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,240,215,.26),rgba(255,240,215,0))}
+.pc__f::after{content:"Soliha";position:absolute;inset:0;display:grid;place-items:center;font-family:var(--serif);font-style:italic;font-weight:500;font-size:.5em;letter-spacing:.1em;line-height:1;color:rgba(255,232,205,.22);text-shadow:.02em .02em .02em rgba(0,0,0,.6),-.02em -.02em .02em rgba(255,240,220,.15)}
+.pc__crack{position:absolute;inset:-6%;border-radius:.5em;pointer-events:none;opacity:0;
   background:linear-gradient(118deg,transparent 46%,rgba(255,250,240,.95) 49.5%,rgba(255,250,240,.95) 50.5%,transparent 54%),radial-gradient(closest-side,rgba(255,240,220,.35),rgba(255,240,220,0))}
-.pc__b{transform:rotateY(180deg);background:var(--milk);padding:5%;box-shadow:0 1px 1px rgba(60,25,30,.12),0 .2em .5em -.2em rgba(70,25,35,.55)}
+/* the back: a photo card, bigger than the bar and never stretched */
+.pc__b{position:absolute;left:50%;top:50%;width:var(--cw);height:var(--ch);margin:calc(var(--ch)/-2) 0 0 calc(var(--cw)/-2);border-radius:7%;
+  transform:rotateY(180deg);-webkit-backface-visibility:hidden;backface-visibility:hidden;
+  background:var(--milk);padding:4%;box-shadow:0 1px 1px rgba(60,25,30,.12),0 .2em .5em -.2em rgba(70,25,35,.55)}
 .pc__b img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 28%;border-radius:8%;background:linear-gradient(110deg,#efe2d6 30%,#f8eee6 50%,#efe2d6 70%) 0 0/300% 100%;animation:wait 1.4s linear infinite}
 .pc__b img.ok{animation:none;background:#eadccf}
 @keyframes wait{to{background-position:-300% 0}}
@@ -172,6 +176,9 @@ p,dl,dd,dt{margin:0}
 .gate.ready .pack{animation:breathe 2.4s ease-in-out infinite}
 @keyframes breathe{50%{transform:scale(1.018)}}
 .gate.open .pack{animation:none}
+/* one unbroken layer on top while the pack is closed, so no tear seam ever crosses her face */
+.pack__whole{clip-path:none}
+.gate.open .pack__whole{opacity:0;transition:none}
 .gate.open .pack__flap{transform:translate(26%,-62%) rotate(24deg);opacity:0}
 .gate.open .pack__half--l{transform:rotateY(-112deg) translateX(-5%);opacity:0}
 .gate.open .pack__half--r{transform:rotateY(112deg) translateX(5%);opacity:0}

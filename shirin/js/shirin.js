@@ -71,13 +71,19 @@ function layout() {
   const sw = 2 * ps + g + 2 * pad, sh = 4 * ps + 3 * g + 2 * pad;
   const cx = W / 2, cy = sf.t + (H - sf.t - sf.b) * .5 + (wide ? 0 : 18);
   const sx = cx - sw / 2, sy = cy - sh / 2;
-  const slots = [];
-  for (let i = 0; i < 8; i++) slots.push({ x: sx + pad + (i % 2) * (ps + g) + ps / 2, y: sy + pad + (i >> 1) * (ps + g) + ps / 2 });
+  /* inside: eight long bars in a stack; they land as bigger 3:4 photo cards in two columns over the same footprint */
+  const rh = (sh - 2 * pad) / 8, brl = sw - 2 * pad, brh = rh * .86;
+  const CH = rh * 2 * 1.45, CW = CH * .75;
+  const slots = [], stack = [];
+  for (let i = 0; i < 8; i++) {
+    stack.push({ x: cx, y: sy + pad + (i + .5) * rh });
+    slots.push({ x: cx + (i % 2 ? 1 : -1) * (CW / 2 + g * .8), y: sy + pad + ((i >> 1) * 2 + 1) * rh });
+  }
   /* two rows of four photos along the bottom, with the buttons under them */
-  const tw = Math.min(Math.floor((W - 28 - 3 * 8) / 4), 64);
-  const stripBottom = H - sf.b - 22 - 56 - 16, stripTop = stripBottom - 2 * tw - 8;
-  const strip = [], sx0 = W / 2 - (4 * tw + 3 * 8) / 2 + tw / 2, sy0 = stripTop + tw / 2;
-  for (let i = 0; i < 8; i++) strip.push({ x: sx0 + (i % 4) * (tw + 8), y: sy0 + (i >> 2) * (tw + 8) });
+  const tw = Math.min(Math.floor((W - 28 - 3 * 8) / 4), 60), th = tw * 4 / 3;
+  const stripBottom = H - sf.b - 22 - 56 - 16, stripTop = stripBottom - 2 * th - 8;
+  const strip = [], sx0 = W / 2 - (4 * tw + 3 * 8) / 2 + tw / 2, sy0 = stripTop + th / 2;
+  for (let i = 0; i < 8; i++) strip.push({ x: sx0 + (i % 4) * (tw + 8), y: sy0 + (i >> 2) * (th + 8) });
   /* the box sits between the title and the photos */
   const sayTop = Math.max(H * .145, 60) + sf.t;        // under the chocolate band and its shortest drips
   const titleBlock = Math.min(H * .17, 150), titleH = sayTop + titleBlock;
@@ -85,7 +91,7 @@ function layout() {
   const bh = Math.min(availH * .9, W * .9 / PACK_AR), bw = bh * PACK_AR, bd = bh * .18;
   const bx = W / 2, by = titleH + availH / 2;
   const pw = Math.min(W * .95, (H - sf.t - sf.b) * .62 * PACK_AR), ph = pw / PACK_AR;
-  G = { ps, g, pad, sw, sh, sx, sy, cx, cy, slots, tw, strip, bw, bh, bd, bx, by, pw, ph, m: Math.min(W, H), sayTop, titleH };
+  G = { ps, g, pad, sw, sh, sx, sy, cx, cy, slots, stack, brl, brh, cw: CW, ch: CH, tw, th, strip, bw, bh, bd, bx, by, pw, ph, m: Math.min(W, H), sayTop, titleH };
   const rs = stage.style;
   rs.setProperty('--ps', `${ps}px`); rs.setProperty('--sw', `${f1(sw)}px`); rs.setProperty('--sh', `${f1(sh)}px`);
   rs.setProperty('--bw', `${f1(bw)}px`); rs.setProperty('--bh', `${f1(bh)}px`); rs.setProperty('--bd', `${f1(bd)}px`);
@@ -93,7 +99,9 @@ function layout() {
   rs.setProperty('--subTop', `${f1(titleBlock * .76)}px`);
   box.style.setProperty('--au', `${(bh * .515 / 100).toFixed(3)}px`);
   box.style.transform = `translate(${f1(bx - bw / 2)}px,${f1(by - bh / 2)}px)`;
-  piecesEl.style.fontSize = `${ps}px`;
+  piecesEl.style.fontSize = `${f1(brh)}px`;
+  rs.setProperty('--pcw', `${f1(brl)}px`); rs.setProperty('--pch', `${f1(brh)}px`);
+  rs.setProperty('--cw', `${f1(CW)}px`); rs.setProperty('--ch', `${f1(CH)}px`);
   pack.style.width = `${f1(pw)}px`; pack.style.height = `${f1(ph)}px`;
   pack.style.left = `${f1(cx - pw / 2)}px`; pack.style.top = `${f1(cy - ph / 2)}px`;     // placed, not transformed: its breathing animation owns the transform
   pack.style.setProperty('--au', `${(pw / 100).toFixed(3)}px`);
@@ -229,6 +237,9 @@ document.querySelectorAll('[data-in]').forEach(el => {
 const meltMap = $('#meltMap'), ttl = $('#ttl');
 let meltK = -1;
 
+/* each card settles with its own small tilt, like photos laid down by hand */
+const JIT = [-2.6, 3, 2.2, -3, 2.8, -2.2, -3, 2.4];
+
 /* ================= the film ================= */
 function render(t) {
   const beat = pulse(t);
@@ -241,31 +252,33 @@ function render(t) {
   const gl = gl2 > 0 && gl2 < 1 ? gl2 : gl1;
   slab.style.setProperty('--gl', `${(130 - 160 * (gl > 0 && gl < 1 ? gl : 1.01)).toFixed(1)}%`);
 
-  /* --- the pieces: each one lifts, cracks, turns over into a photo; later they all slide down into a row --- */
+  /* --- the pieces: each bar springs from the stack on its beat, flips mid-air, and lands as a bigger photo card --- */
   pieces.forEach((pc, i) => {
-    const slot = G.slots[i], t0 = PIECE(i);
-    let x = slot.x, y = slot.y, s = 1, rx = 0, ry = 0, rz = 0, crack = 0;
+    const home = G.stack[i], slot = G.slots[i], t0 = PIECE(i);
+    let x = home.x, y = home.y, s = 1, rx = 0, ry = 0, rz = 0, crack = 0;
     if (t < t0) s = 1 + .014 * beat;
     else {
-      const a = span(t, t0, t0 + .5), b = span(t, t0 + .32, t0 + 1.02);
+      const a = span(t, t0, t0 + .5), b = span(t, t0 + .32, t0 + 1.02), p = eio(span(t, t0 + .12, t0 + 1.0));
       const hump = Math.sin(Math.PI * a);
-      s = 1 + .24 * hump * (1 - b * .5) + .05 * Math.sin(Math.PI * b);
-      rz = (i % 2 ? 8 : -8) * hump;
-      rx = 16 * hump;
+      x = lerp(home.x, slot.x, p);
+      y = lerp(home.y, slot.y, p) - Math.sin(Math.PI * p) * G.ch * .45;
+      s = 1 + .18 * hump;
+      rx = 14 * hump;
       ry = 180 * eio(b);
+      rz = (i % 2 ? 7 : -7) * hump + JIT[i] * eio(b);
       crack = a > .06 && a < .55 ? Math.sin((a - .06) / .49 * Math.PI) : 0;
-      if (b >= 1) s = 1 + .012 * beat;
+      if (b >= 1) { s = 1 + .012 * beat; rz = JIT[i]; }
     }
     if (t >= GATHER) {
       const p = eio(span(t, GATHER + i * .07, GATHER + i * .07 + .95));
-      x = lerp(slot.x, G.strip[i].x, p); y = lerp(slot.y, G.strip[i].y, p) - Math.sin(Math.PI * p) * G.ps * .4;
-      s = lerp(s, G.tw / G.ps, p); ry = 180; rx = 0; rz = lerp(rz, 0, p);
+      x = lerp(x, G.strip[i].x, p); y = lerp(y, G.strip[i].y, p) - Math.sin(Math.PI * p) * G.ch * .35;
+      s = lerp(s, G.tw / G.cw, p); ry = 180; rx = 0; rz = lerp(JIT[i], 0, p);
       if (t > END) s *= 1 + .02 * beat;
     }
-    pc.b.style.transform = `translate3d(${f1(x - G.ps / 2)}px,${f1(y - G.ps / 2)}px,0) scale(${f2(s)}) rotateX(${f1(rx)}deg) rotateZ(${f1(rz)}deg) rotateY(${f1(ry)}deg)`;
+    pc.b.style.transform = `translate3d(${f1(x - G.brl / 2)}px,${f1(y - G.brh / 2)}px,0) scale(${f2(s)}) rotateX(${f1(rx)}deg) rotateZ(${f1(rz)}deg) rotateY(${f1(ry)}deg)`;
     const ck = Math.round(crack * 20);
     if (pc.ck !== ck) { pc.ck = ck; pc.crack.style.opacity = f2(crack); }
-    const z = t >= t0 && t < t0 + 1.2 ? 10 : 1;
+    const z = t >= t0 && t < t0 + 1.2 ? 10 : (t >= t0 + 1.02 ? 2 + i : 1);
     if (pc.z !== z) { pc.z = z; pc.b.style.zIndex = z; }
     if (pc.vis !== 1) { pc.vis = 1; pc.b.style.opacity = 1; }
   });
@@ -464,17 +477,17 @@ async function makeWallpaper() {
   g.fillStyle = '#fff'; g.fillRect(bx, by, bw, bh);
   if (packIm) g.drawImage(packIm, bx, by, bw, bh);
   g.restore();
-  /* the eight pieces in a row of four, twice */
-  const tw = 70, gap = 8, x0 = (LW - 4 * tw - 3 * gap) / 2, y0 = by + bh + 34;
+  /* the eight photos, 3:4 cards in a row of four, twice */
+  const tw = 66, th = 88, gap = 8, x0 = (LW - 4 * tw - 3 * gap) / 2, y0 = by + bh + 30;
   pieces.forEach((pc, i) => {
-    const x = x0 + (i % 4) * (tw + gap), y = y0 + (i >> 2) * (tw + gap);
-    g.save(); g.shadowColor = 'rgba(60,25,10,.3)'; g.shadowBlur = 10; g.shadowOffsetY = 5; g.fillStyle = '#fff8ef'; rrect(g, x, y, tw, tw, 8); g.fill(); g.restore();
-    g.save(); rrect(g, x + 4, y + 4, tw - 8, tw - 8, 5); g.clip();
-    if (pc.img.naturalWidth) { const r = Math.max((tw - 8) / pc.img.naturalWidth, (tw - 8) / pc.img.naturalHeight); g.drawImage(pc.img, x + 4 + ((tw - 8) - pc.img.naturalWidth * r) / 2, y + 4 + ((tw - 8) - pc.img.naturalHeight * r) * .28, pc.img.naturalWidth * r, pc.img.naturalHeight * r); }
+    const x = x0 + (i % 4) * (tw + gap), y = y0 + (i >> 2) * (th + gap);
+    g.save(); g.shadowColor = 'rgba(60,25,10,.3)'; g.shadowBlur = 10; g.shadowOffsetY = 5; g.fillStyle = '#fff8ef'; rrect(g, x, y, tw, th, 8); g.fill(); g.restore();
+    g.save(); rrect(g, x + 4, y + 4, tw - 8, th - 8, 5); g.clip();
+    if (pc.img.naturalWidth) { const r = Math.max((tw - 8) / pc.img.naturalWidth, (th - 8) / pc.img.naturalHeight); g.drawImage(pc.img, x + 4 + ((tw - 8) - pc.img.naturalWidth * r) / 2, y + 4 + ((th - 8) - pc.img.naturalHeight * r) * .28, pc.img.naturalWidth * r, pc.img.naturalHeight * r); }
     g.restore();
   });
   g.fillStyle = '#3b1d10'; g.font = 'italic 400 25px Fraunces, serif'; g.textAlign = 'center';
-  g.fillText('Shirinlikdek shirin bo‘ling.', LW / 2, y0 + 2 * tw + gap + 44);
+  g.fillText('Shirinlikdek shirin bo‘ling.', LW / 2, y0 + 2 * th + gap + 40);
   return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('toBlob')), 'image/jpeg', .92));
 }
 let wpBlob = null, wpURL = null, wpJob = null;
