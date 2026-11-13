@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 10;
+  const V = 11;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
@@ -41,12 +41,19 @@
   function heartCells(HW, need) {
     const u = HW / 32;
     for (let cols = 7; cols <= 21; cols += 2) { // odd, so one column sits in the cleft and one at the tip
-      const w = HW / cols, h = w * 4 / 3, rows = Math.ceil(30 * u / h) + 1, out = [];
-      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        const x = -HW / 2 + (c + .5) * w, y = -14.6 * u + (r + .5) * h;
-        if (inHeart(x / u / 1.05, (-y / u - 2.45) / 1.05)) out.push({ x, y });
+      const w = HW / cols, h = w * 4 / 3, rows = Math.ceil(30 * u / h) + 1;
+      let best = null;
+      // nudge the outline a little in or out until it holds exactly as many cells as there are pictures: nobody has to appear twice
+      for (let k = 0; k <= 18; k++) for (const sgn of k ? [-1, 1] : [1]) {
+        const sc = 1.05 + sgn * k * .01; if (sc < .94 || sc > 1.14) continue;
+        const out = [];
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          const x = -HW / 2 + (c + .5) * w, y = -14.6 * u + (r + .5) * h;
+          if (inHeart(x / u / sc, (-y / u - 2.45) / sc)) out.push({ x, y });
+        }
+        if (out.length >= need && (!best || out.length < best.length)) best = out;
       }
-      if (out.length >= need) return { cells: out, w, h };
+      if (best) return { cells: best, w, h };
     }
     return null;
   }
