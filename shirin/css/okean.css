@@ -24,6 +24,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .tl>.vd.live{opacity:1}
 .tl::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#1d7fa6,#07305c);opacity:var(--tint,0);pointer-events:none;transition:opacity 1.1s ease}
 .tl.home::after{opacity:0}
+.tl.star{box-shadow:0 0 0 1.5px rgba(255,214,226,.9),0 0 26px rgba(255,150,185,.45),0 10px 28px rgba(0,8,24,.5)}
 .sea.is-fin .tl{pointer-events:auto;cursor:pointer}
 
 /* ---------- words ---------- */

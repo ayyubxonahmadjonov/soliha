@@ -8,9 +8,10 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 5;
+  const V = 6;
 
   // the song: 67.4 bpm, first downbeat at B0
+  const STAR = 'v59';
   const BEAT = .89, B0 = 3.61, END = 22.29;
   const beat = k => B0 + k * BEAT;
   const GATHER = beat(15), WHOLE = beat(19);
@@ -78,18 +79,24 @@
       } else { node = new Image(); node.decoding = 'async'; node.alt = ''; node.src = (m.url || `${DIR}${m.n}.webp?v=${V}`); }
       node.draggable = false;
       el.appendChild(node); tilesEl.appendChild(el);
-      const z = m.k === 'v' ? .7 + .3 * r() : Math.pow(r(), .85);
+      const star = m.n === STAR; // his favourite: always nearest, biggest, and the middle of the heart
+      const z0 = m.k === 'v' ? .7 + .3 * r() : Math.pow(r(), .85), z = star ? 1 : z0;
       const rank = order[i];
-      const sc = lerp(.34, 1.06, Math.pow(z, 1.4));
-      el.style.zIndex = 1 + Math.round(z * 40);
+      const sc = star ? 1.24 : lerp(.34, 1.06, Math.pow(z, 1.4)), bz = star ? 46 : 1 + Math.round(z * 40);
+      el.style.zIndex = bz; if (star) el.classList.add('star');
       el.style.setProperty('--tint', (lerp(.5, .04, z)).toFixed(2));
       el.addEventListener('click', () => openBig(m));
       return {
-        el, m, z, sc, i, vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
-        t0: .3 + 12 * Math.pow(i / n, 1.2), v: lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
+        el, m, z, sc, i, bz, star: star ? 1 : 0, vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
+        t0: star ? .9 : .3 + 12 * Math.pow(i / n, 1.2), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
     });
+    const S = tiles.find(T => T.star);
+    if (S) { // she takes the cell at the heart of the heart
+      const C = tiles.reduce((a, b) => (a.cell.x ** 2 + a.cell.y ** 2 <= b.cell.x ** 2 + b.cell.y ** 2 ? a : b));
+      [S.cell, C.cell] = [C.cell, S.cell]; [S.stag, C.stag] = [C.stag, S.stag];
+    }
     G = { HW, cw, ch, hs: hc.w * .93 / cw, cx: W / 2, cy: Math.max(H * .41, HW * .56 + H * .06), n };
     endEl.style.top = `${G.cy + HW * .52 + H * .035}px`;
     bloom.style.transform = `translate(-50%,-50%)`;
@@ -157,7 +164,7 @@
       const m = G.ch * T.sc, SPAN = H + 2 * m;
       const run = Math.max(0, (D - T.t0)) * T.v * H, pass = Math.floor(run / SPAN);
       let y = H + m - (run - pass * SPAN);
-      let x = W * lerp(.1, .9, hash(T.i, pass)) + Math.sin(t * T.fr + T.ph) * T.sw;
+      let x = W * (T.star ? lerp(.32, .68, hash(T.i, pass)) : lerp(.1, .9, hash(T.i, pass))) + Math.sin(t * T.fr + T.ph) * T.sw;
       let sc = T.sc * (1 + .05 * p0 * T.z), rz = T.tilt + Math.sin(t * T.fr * .8 + T.ph) * 5, ry = Math.sin(t * .7 + T.ph) * 16, rx = Math.cos(t * .55 + T.ph) * 7;
       let op = T.op * span(t, T.t0, T.t0 + .5);
       // home
@@ -166,13 +173,13 @@
         const p = eio(g), hx = G.cx + T.cell.x * hb, hy = G.cy + T.cell.y * hb + bob;
         const dx = hx - x, dy = hy - y, arc = Math.sin(Math.PI * p) * T.swirl;
         x = lerp(x, hx, p) - dy * arc; y = lerp(y, hy, p) + dx * arc;
-        sc = lerp(sc, G.hs * hb, p) * (1 + .16 * Math.sin(Math.PI * span(t, g0 + 1.5, g0 + 1.95)));
+        sc = lerp(sc, G.hs * hb * (T.star ? 1.34 : 1), p) * (1 + .16 * Math.sin(Math.PI * span(t, g0 + 1.5, g0 + 1.95)));
         rz = lerp(rz, 0, p) + 200 * T.swirl * (1 - p) * p; ry = lerp(ry, 0, p); rx = lerp(rx, 0, p);
         op = lerp(op, 1, span(g, 0, .5));
       }
       // only touch what changed: these writes are what make a phone stutter mid-flight
       const zi = g <= 0 ? 0 : g >= 1 ? 50 : 60;
-      if (zi !== T.zi) { T.zi = zi; s.zIndex = zi || 1 + Math.round(T.z * 40); }
+      if (zi !== T.zi) { T.zi = zi; s.zIndex = zi ? zi + T.star * 2 : T.bz; }
       if ((g > 0) !== T.home) { T.home = g > 0; T.el.classList.toggle('home', T.home); }
       s.opacity = op.toFixed(3);
       s.transform = `translate3d(${(x - G.cw / 2).toFixed(1)}px,${(y - G.ch / 2).toFixed(1)}px,0) rotateX(${rx.toFixed(1)}deg) rotateY(${ry.toFixed(1)}deg) rotate(${rz.toFixed(1)}deg) scale(${sc.toFixed(4)})`;
