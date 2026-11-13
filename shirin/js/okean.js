@@ -8,11 +8,12 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 12;
+  const V = 14;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
-  const BEAT = .89, B0 = 3.61, END = 22.29;
+  const RATE = .9; // the clip is played at nine tenths of its speed; every time below follows from that
+  const BEAT = .89 / RATE, B0 = 3.61 / RATE, END = 22.29 / RATE;
   const beat = k => B0 + k * BEAT;
   const GATHER = beat(15), WHOLE = beat(19);
 
@@ -54,6 +55,35 @@
     return best;
   }
 
+  // Who sits next to whom in the heart: look-alikes are kept apart, a photo's second copy goes far from the first,
+  // and the videos are spread through the whole shape instead of bunching. A few thousand trial swaps settle it.
+  function arrange(list, seat, order, cells, hc, r) {
+    const n = cells.length, it = new Array(n);
+    seat.forEach((j, i) => { if (j >= 0) it[j] = list[i]; });
+    if (it.some(x => !x)) return;
+    const sg = it.map(m => m.s ? [...m.s].map(c => parseInt(c, 16)) : null);
+    const pc = new Float32Array(n * n);
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+      let sim = 0;
+      if (sg[a] && sg[b]) { let d = 0; for (let k = 0; k < 36; k++) d += Math.abs(sg[a][k] - sg[b][k]); sim = Math.exp(-d / 36 / 1.5); }
+      pc[a * n + b] = pc[b * n + a] = sim + (it[a].k === 'v' && it[b].k === 'v' ? 1.6 : 0) + (it[a].n === it[b].n ? 6 : 0);
+    }
+    const nb = cells.map((c, i) => { const o = []; cells.forEach((d, j) => { if (i === j) return; const dx = Math.abs(c.x - d.x) / hc.w, dy = Math.abs(c.y - d.y) / hc.h, m = Math.max(dx, dy); if (m < 1.1) o.push([j, dx + dy < 1.1 ? 1 : .6]); else if (m < 2.1) o.push([j, .22]); }); return o; });
+    const at = new Array(n); // cell -> slot
+    const centre = cells.reduce((b, c, i) => (c.x * c.x + c.y * c.y < cells[b].x ** 2 + cells[b].y ** 2 ? i : b), 0);
+    const star = it.findIndex(m => m.n === STAR);
+    if (star >= 0) { const o = order.indexOf(centre); [order[star], order[o]] = [order[o], order[star]]; }
+    order.forEach((c, j) => { at[c] = j; });
+    const local = j => { let v = 0; for (const [c, w] of nb[order[j]]) v += w * pc[j * n + at[c]]; return v; };
+    for (let k = 0, K = 26000; k < K; k++) {
+      const a = Math.floor(r() * n), b = Math.floor(r() * n); if (a === b || a === star || b === star) continue;
+      const before = local(a) + local(b);
+      [order[a], order[b]] = [order[b], order[a]]; at[order[a]] = a; at[order[b]] = b;
+      const d = local(a) + local(b) - before, T = .25 * (1 - k / K);
+      if (d > 0 && r() > Math.exp(-d / Math.max(T, 1e-4))) { [order[a], order[b]] = [order[b], order[a]]; at[order[a]] = a; at[order[b]] = b; }
+    }
+  }
+
   function build() {
     const r = rng(20261113);
     const HW = Math.min(W * .92, H * .52);
@@ -70,6 +100,7 @@
     for (let i = 0, j = 0; i < list.length; i++) if (!seat.has(i)) seat.set(i, j < n ? j++ : -1);
     const order = cells.map((_, i) => i); // which tile takes which cell
     for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    arrange(list, seat, order, cells, hc, rng(909));
 
     const cw = clamp(W * .305, 94, 156), ch = cw * 4 / 3;
     document.documentElement.style.setProperty('--cw', cw + 'px');
@@ -100,7 +131,7 @@
       el.addEventListener('click', () => openBig(m));
       return {
         el, m, z, sc, i, bz, star: star ? 1 : 0, sk: hash(i, 9), vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, out, cell: cells[rank], stag: 1.9 * rank / n,
-        t0: star ? 0 : B0 - .3 + 10.6 * Math.pow(i / n, 1.5), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
+        t0: star ? 0 : B0 - .3 + 11.8 * Math.pow(i / n, 1.5), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
     });
@@ -240,7 +271,7 @@
   function render(t, bt) {
     if (!G) return;
     const D = sink(t), p0 = pulse(bt) * span(t, B0 - .05, B0 + .05);
-    const d = eio(span(t, .4, 16.4));
+    const d = eio(span(t, .4, 18.2));
     deep.style.opacity = (d * .97).toFixed(3);
     rays.style.opacity = ((1 - .78 * d) * (.5 + .3 * p0) * span(t, 0, .8)).toFixed(3);
     rays.style.transform = `rotate(${(Math.sin(t * .31) * 3.2).toFixed(2)}deg) translateX(${(Math.sin(t * .23 + 1) * 3).toFixed(2)}%)`;
