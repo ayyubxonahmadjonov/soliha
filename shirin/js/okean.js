@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 6;
+  const V = 7;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
@@ -88,7 +88,7 @@
       el.addEventListener('click', () => openBig(m));
       return {
         el, m, z, sc, i, bz, star: star ? 1 : 0, vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
-        t0: star ? .9 : .3 + 12 * Math.pow(i / n, 1.2), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
+        t0: star ? 0 : B0 - .3 + 10.6 * Math.pow(i / n, 1.5), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
     });
@@ -162,11 +162,19 @@
       if (t < T.t0 && t < GATHER) { s.opacity = 0; continue; }
       // adrift
       const m = G.ch * T.sc, SPAN = H + 2 * m;
-      const run = Math.max(0, (D - T.t0)) * T.v * H, pass = Math.floor(run / SPAN);
+      // the one he looked at first hangs alone in the middle until the song comes in, then the sea takes it like the rest
+      const run = T.star ? H + m - H * .47 + Math.max(0, D - B0) * T.v * H : Math.max(0, (D - T.t0)) * T.v * H, pass = Math.floor(run / SPAN);
       let y = H + m - (run - pass * SPAN);
       let x = W * (T.star ? lerp(.32, .68, hash(T.i, pass)) : lerp(.1, .9, hash(T.i, pass))) + Math.sin(t * T.fr + T.ph) * T.sw;
       let sc = T.sc * (1 + .05 * p0 * T.z), rz = T.tilt + Math.sin(t * T.fr * .8 + T.ph) * 5, ry = Math.sin(t * .7 + T.ph) * 16, rx = Math.cos(t * .55 + T.ph) * 7;
       let op = T.op * span(t, T.t0, T.t0 + .5);
+      if (T.star && t < B0 + 1.4) {
+        const k = eio(span(t, B0 - .1, B0 + 1.3));
+        x = lerp(W / 2, x, k); y += (1 - k) * Math.sin(t * 1.1) * 7;
+        sc = lerp(Math.min(W * .62 / G.cw, H * .42 / G.ch), sc, k);
+        rz = lerp(-2 + Math.sin(t * .9) * 1.6, rz, k); ry *= .25 + .75 * k; rx *= .25 + .75 * k;
+        op = span(t, .15, 1.1);
+      }
       // home
       const g0 = GATHER + T.stag, g = span(t, g0, g0 + 1.62);
       if (g > 0) {
@@ -174,6 +182,7 @@
         const dx = hx - x, dy = hy - y, arc = Math.sin(Math.PI * p) * T.swirl;
         x = lerp(x, hx, p) - dy * arc; y = lerp(y, hy, p) + dx * arc;
         sc = lerp(sc, G.hs * hb * (T.star ? 1.34 : 1), p) * (1 + .16 * Math.sin(Math.PI * span(t, g0 + 1.5, g0 + 1.95)));
+        if (whole > 0) sc *= 1 + .06 * whole * pulse(bt - .5 * Math.hypot(T.cell.x, T.cell.y) / G.HW); // each beat rolls outward from the middle
         rz = lerp(rz, 0, p) + 200 * T.swirl * (1 - p) * p; ry = lerp(ry, 0, p); rx = lerp(rx, 0, p);
         op = lerp(op, 1, span(g, 0, .5));
       }
