@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 7;
+  const V = 8;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
@@ -30,6 +30,11 @@
   const pulse = time => { const f = (((time - B0) / BEAT) % 1 + 1) % 1; return Math.exp(-7 * f) + (f > .28 ? .55 * Math.exp(-9 * (f - .28)) : 0); };
 
   let W = 0, H = 0, G = null, tiles = [];
+  const NAME0 = WHOLE + .5;                       // when the school sets off to write her name
+  const SC = { t0: -99, x: 0, y: 0, k: 0 };       // a touch on the water: everything darts away, then comes back
+  const tilt = { x: 0, y: 0, tx: 0, ty: 0, on: false };
+  const fx2 = document.getElementById('fx2'), ctx2 = fx2.getContext('2d');
+  let fish = [], NM = null, fx2Dirty = false;
 
   const HEART = Array.from({ length: 160 }, (_, i) => { const a = i / 160 * 6.2832, q = Math.sin(a); return [16 * q * q * q, 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)]; });
   const inHeart = (x, y) => { let c = false; for (let i = 0, j = HEART.length - 1; i < HEART.length; j = i++) { const [xi, yi] = HEART[i], [xj, yj] = HEART[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
@@ -87,7 +92,7 @@
       el.style.setProperty('--tint', (lerp(.5, .04, z)).toFixed(2));
       el.addEventListener('click', () => openBig(m));
       return {
-        el, m, z, sc, i, bz, star: star ? 1 : 0, vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
+        el, m, z, sc, i, bz, star: star ? 1 : 0, sk: hash(i, 9), vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
         t0: star ? 0 : B0 - .3 + 10.6 * Math.pow(i / n, 1.5), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
@@ -99,7 +104,87 @@
     }
     G = { HW, cw, ch, hs: hc.w * .93 / cw, cx: W / 2, cy: Math.max(H * .41, HW * .56 + H * .06), n };
     endEl.style.top = `${G.cy + HW * .52 + H * .035}px`;
+    tilesEl.style.transformOrigin = `50% ${G.cy.toFixed(0)}px`;
+    buildName();
     bloom.style.transform = `translate(-50%,-50%)`;
+  }
+
+  // ---------- her name, written by a school of small fish ----------
+  function buildName() {
+    const top = G.cy - G.HW * .5, fs = Math.min(W * .255, top * .64), cy = Math.max(top * .5, fs * .7 + 6);
+    const cw = Math.ceil(Math.min(fs * 3.9, W * .98)), chh = Math.ceil(fs * 1.7), c = document.createElement('canvas');
+    c.width = cw; c.height = chh;
+    const x = c.getContext('2d');
+    x.font = `italic 500 ${fs}px Fraunces, Georgia, serif`; x.textBaseline = 'middle';
+    const gap = fs * .075, ws = [...'Soliha'].map(ch => x.measureText(ch).width), tw = ws.reduce((a, b) => a + b, 0) + gap * 5;
+    [...'Soliha'].reduce((px, ch, i) => { x.fillText(ch, px, chh / 2); return px + ws[i] + gap; }, (cw - tw) / 2);
+    const d = x.getImageData(0, 0, cw, chh).data, r = rng(4242);
+    let st = Math.max(2.8, fs / 19), pts = [];
+    for (let k = 0; k < 6; k++) {
+      pts = [];
+      for (let j = 0, row = 0; j < chh; j += st * .86, row++) for (let i = (row % 2) * st * .5; i < cw; i += st) {
+        if (d[(Math.round(j) * cw + Math.round(i)) * 4 + 3] > 120) pts.push([i, j]);
+      }
+      if (pts.length <= 430) break; st *= 1.12;
+    }
+    const x0 = W / 2 - cw / 2, y0 = cy - chh / 2;
+    fish = pts.map(([px, py]) => {
+      const nx = px / cw;
+      return { x: x0 + px, y: y0 + py, d: (1 - nx) * 1.05 + r() * .55, ax: -30 - r() * 90, ay: cy + (r() - .5) * fs * 2.2 + fs * .5, ph: r() * 6.283, L: st * (1.3 + .45 * r()), w: lerp(9, 22, r()), gold: r() < .22, sk: r() };
+    });
+    NM = { fs, cy, st };
+  }
+  function fishPos(f, t, out) {
+    const u = t - NAME0 - f.d, p = eout(clamp(u / 2.05)), q = 1 - p;
+    out.x = lerp(f.ax, f.x, p) + Math.sin(t * 1.3 + f.ph) * .8 * p;
+    out.y = lerp(f.ay, f.y, eio(clamp(u / 2.05))) + Math.sin(u * 4.6 + f.ph) * f.w * q + Math.cos(t * 1.7 + f.ph) * .8 * p;
+    out.p = p;
+  }
+  // one dolphin, nose to +x, about one unit long
+  function dolphin(c) {
+    c.moveTo(.5, .03); c.lineTo(.4, .0);
+    c.bezierCurveTo(.38, -.07, .3, -.11, .2, -.115); c.bezierCurveTo(.12, -.125, .05, -.125, 0, -.12);
+    c.quadraticCurveTo(-.06, -.2, -.14, -.225); c.quadraticCurveTo(-.1, -.15, -.13, -.1);
+    c.bezierCurveTo(-.25, -.07, -.36, 0, -.43, .07);
+    c.quadraticCurveTo(-.5, .03, -.58, .04); c.quadraticCurveTo(-.5, .1, -.5, .22); c.quadraticCurveTo(-.45, .16, -.4, .12);
+    c.bezierCurveTo(-.3, .1, -.1, .1, .05, .085);
+    c.quadraticCurveTo(.04, .16, -.03, .2); c.quadraticCurveTo(.1, .17, .15, .08);
+    c.bezierCurveTo(.25, .075, .33, .07, .4, .055); c.lineTo(.5, .03); c.closePath();
+  }
+  const _a = {}, _b = {};
+  function drawName(t, bt) {
+    const from = Math.max(NAME0, SC.t0 + .15);
+    if (t < NAME0 - .4 || !NM) { if (fx2Dirty) { ctx2.setTransform(1, 0, 0, 1, 0, 0); ctx2.clearRect(0, 0, fx2.width, fx2.height); fx2Dirty = false; } return; }
+    const dpr = fx2.width / W; fx2Dirty = true;
+    ctx2.setTransform(1, 0, 0, 1, 0, 0); ctx2.clearRect(0, 0, fx2.width, fx2.height);
+    // the two that lead the school in (and come by again whenever the water is touched)
+    for (let k = 0; k < 2; k++) {
+      const u = (t - from - k * .38) / 3.1; if (u < 0 || u > 1) continue;
+      const S = W * (k ? .15 : .19), xx = lerp(-S, W + S, u), ph = k * 1.1;
+      const yy = NM.cy + NM.fs * (k ? .75 : .2) - Math.sin(u * 9.2 + ph) * NM.fs * .5, ang = Math.atan2(-Math.cos(u * 9.2 + ph) * NM.fs * .5 * 9.2, W + 2 * S);
+      const cs = Math.cos(ang) * S * dpr, sn = Math.sin(ang) * S * dpr;
+      ctx2.setTransform(cs, sn, -sn, cs, xx * dpr, yy * dpr);
+      ctx2.beginPath(); dolphin(ctx2);
+      ctx2.globalAlpha = (k ? .62 : .82) * Math.min(1, u * 8, (1 - u) * 8); ctx2.fillStyle = k ? '#bfe6ff' : '#e6f6ff'; ctx2.fill();
+    }
+    const glow = .82 + .18 * pulse(bt);
+    for (let pass = 0; pass < 2; pass++) {
+      ctx2.beginPath();
+      for (const f of fish) {
+        if ((pass === 1) !== f.gold) continue;
+        if (t - NAME0 - f.d < 0) continue;
+        fishPos(f, t, _a); fishPos(f, t - .05, _b);
+        let x = _a.x, y = _a.y, dx = _a.x - _b.x, dy = _a.y - _b.y;
+        let ang = Math.atan2(dy, dx) * (1 - span(_a.p, .8, 1)) + Math.sin(t * 2.2 + f.ph) * .16 * _a.p;
+        if (SC.k > 0) { const ex = x - SC.x, ey = y - SC.y, el = Math.hypot(ex, ey) || 1, m = SC.k * (26 + 60 * f.sk); x += ex / el * m; y += ey / el * m; ang = lerp(ang, Math.atan2(ey, ex), Math.min(1, SC.k * 3) * (SC.out ? 1 : 0)) + (SC.out ? 0 : Math.PI * SC.k); }
+        const L = f.L * dpr, cs = Math.cos(ang) * L, sn = Math.sin(ang) * L;
+        ctx2.setTransform(cs, sn, -sn, cs, x * dpr, y * dpr);
+        ctx2.moveTo(.52, 0); ctx2.quadraticCurveTo(.12, -.27, -.24, 0); ctx2.quadraticCurveTo(.12, .27, .52, 0);
+        ctx2.moveTo(-.18, 0); ctx2.lineTo(-.52, -.22); ctx2.lineTo(-.42, 0); ctx2.lineTo(-.52, .22); ctx2.closePath();
+      }
+      ctx2.globalAlpha = glow; ctx2.fillStyle = pass ? '#ffd58a' : '#ffe9f0'; ctx2.fill();
+    }
+    ctx2.globalAlpha = 1;
   }
 
   // ---------- little things in the water ----------
@@ -153,6 +238,8 @@
     rays.style.opacity = ((1 - .78 * d) * (.5 + .3 * p0) * span(t, 0, .8)).toFixed(3);
     rays.style.transform = `rotate(${(Math.sin(t * .31) * 3.2).toFixed(2)}deg) translateX(${(Math.sin(t * .23 + 1) * 3).toFixed(2)}%)`;
 
+    const su = t - SC.t0; SC.out = su < .5;
+    SC.k = su < 0 || su > 2.1 ? 0 : eout(span(su, 0, .42)) * (1 - eio(span(su, .95, 2.1)));
     const whole = span(t, WHOLE, WHOLE + .5);
     const hb = 1 + .034 * pulse(bt) * whole + .1 * Math.sin(Math.PI * span(t, WHOLE, WHOLE + .6)) * (t < WHOLE + .6 ? 1 : 0);
     const bob = Math.sin(t * .9) * 4 * whole;
@@ -168,6 +255,7 @@
       let x = W * (T.star ? lerp(.32, .68, hash(T.i, pass)) : lerp(.1, .9, hash(T.i, pass))) + Math.sin(t * T.fr + T.ph) * T.sw;
       let sc = T.sc * (1 + .05 * p0 * T.z), rz = T.tilt + Math.sin(t * T.fr * .8 + T.ph) * 5, ry = Math.sin(t * .7 + T.ph) * 16, rx = Math.cos(t * .55 + T.ph) * 7;
       let op = T.op * span(t, T.t0, T.t0 + .5);
+      if (tilt.on) { x += tilt.x * (T.z - .35) * 40; y += tilt.y * (T.z - .35) * 28; } // nearer ones slide further when the phone leans
       if (T.star && t < B0 + 1.4) {
         const k = eio(span(t, B0 - .1, B0 + 1.3));
         x = lerp(W / 2, x, k); y += (1 - k) * Math.sin(t * 1.1) * 7;
@@ -184,6 +272,7 @@
         sc = lerp(sc, G.hs * hb * (T.star ? 1.34 : 1), p) * (1 + .16 * Math.sin(Math.PI * span(t, g0 + 1.5, g0 + 1.95)));
         if (whole > 0) sc *= 1 + .06 * whole * pulse(bt - .5 * Math.hypot(T.cell.x, T.cell.y) / G.HW); // each beat rolls outward from the middle
         rz = lerp(rz, 0, p) + 200 * T.swirl * (1 - p) * p; ry = lerp(ry, 0, p); rx = lerp(rx, 0, p);
+        if (SC.k > 0) { const ex = hx - SC.x, ey = hy - SC.y, el = Math.hypot(ex, ey) || 1, m = SC.k * (W * .2 + G.HW * .55 * T.sk); x += ex / el * m; y += ey / el * m; rz += SC.k * T.swirl * 150; ry += SC.k * 40 * (T.sk - .5); sc *= 1 - .1 * SC.k; }
         op = lerp(op, 1, span(g, 0, .5));
       }
       // only touch what changed: these writes are what make a phone stutter mid-flight
@@ -210,13 +299,18 @@
     const bs = G.HW * (t >= WHOLE ? 1.75 * hb : lerp(.6, 2.6, eout(span(t, GATHER, GATHER + 1.2)))) / 10;
     bloom.style.transform = `translate(-50%,-50%) translateY(${G.cy.toFixed(0)}px) scale(${bs.toFixed(2)})`;
 
-    drawFx(t, bt);
+    if (tilt.on) {
+      tilesEl.style.transform = `perspective(900px) rotateY(${(tilt.x * 7).toFixed(2)}deg) rotateX(${(-tilt.y * 5).toFixed(2)}deg)`;
+      fx2.style.transform = `translate3d(${(-tilt.x * 9).toFixed(1)}px,${(-tilt.y * 7).toFixed(1)}px,0)`;
+      rays.style.transform += ` translateX(${(-tilt.x * 2.5).toFixed(2)}%)`;
+    }
+    drawFx(t, bt); drawName(t, bt);
   }
 
   function layout() {
     W = innerWidth; H = innerHeight;
     const dpr = Math.min(devicePixelRatio || 1, 2);
-    fx.width = Math.round(W * dpr); fx.height = Math.round(H * dpr);
+    fx.width = fx2.width = Math.round(W * dpr); fx.height = fx2.height = Math.round(H * dpr);
     build();
   }
 
@@ -233,6 +327,7 @@
   }
   function frame() {
     requestAnimationFrame(frame);
+    if (tilt.on) { tilt.x += (tilt.tx - tilt.x) * .09; tilt.y += (tilt.ty - tilt.y) * .09; }
     if (AT != null) { tNow = AT; render(AT, AT); return; }
     if (state === 'wait') { render(0, 0); return; }
     if (state === 'play') {
@@ -245,7 +340,7 @@
   setInterval(() => { if (state !== 'wait' && !document.hidden) playAll(); }, 1200); // a phone may stall one; nudge it back
   function start() {
     state = 'play'; sea.classList.remove('is-fin');
-    song.loop = false; song.volume = 1;
+    song.loop = false; song.volume = 1; song.muted = false; SC.t0 = -99;
     try { song.currentTime = 0; } catch (e) {}
     aP = performance.now(); aT = 0;
     const p = song.play(); if (p) p.catch(() => { resume.hidden = false; });
@@ -264,7 +359,30 @@
   resume.addEventListener('click', () => { resume.hidden = true; const p = song.play(); if (p) p.catch(() => { resume.hidden = false; }); playAll(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && state !== 'wait' && song.paused) resume.hidden = false; });
   $('again').addEventListener('click', start);
-  gate.addEventListener('click', () => { if (gate.disabled) return; gate.classList.add('open'); start(); });
+  // leaning the phone: gyroscope where there is one, the mouse on a desktop
+  let g0 = null, b0 = null;
+  function onTilt(e) {
+    if (e.gamma == null || e.beta == null) return;
+    if (g0 == null) { g0 = e.gamma; b0 = e.beta; }
+    g0 += (e.gamma - g0) * .004; b0 += (e.beta - b0) * .004; // however she holds it becomes the new level
+    tilt.tx = clamp((e.gamma - g0) / 22, -1, 1); tilt.ty = clamp((e.beta - b0) / 22, -1, 1); tilt.on = true;
+  }
+  function listenTilt() { addEventListener('deviceorientation', onTilt); }
+  addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; tilt.tx = clamp((e.clientX / W - .5) * 2, -1, 1); tilt.ty = clamp((e.clientY / H - .5) * 2, -1, 1); tilt.on = true; });
+  sea.addEventListener('click', e => { if (state !== 'fin' || tNow - SC.t0 < 2.2 || e.target.closest('.tl,.btn')) return; SC.t0 = tNow; SC.x = e.clientX; SC.y = e.clientY; });
+
+  let going = false;
+  gate.addEventListener('click', () => {
+    if (gate.disabled || going) return; going = true;
+    const go = () => { gate.classList.add('open'); start(); };
+    const DO = window.DeviceOrientationEvent;
+    if (DO && typeof DO.requestPermission === 'function') {
+      // iPhone asks before it shares its tilt. The song is woken (silently) inside this same tap so it is still free to play once she has answered.
+      song.muted = true; const p = song.play(); if (p) p.catch(() => {});
+      let done = false; const fin1 = ok => { if (done) return; done = true; if (ok) listenTilt(); go(); };
+      try { DO.requestPermission().then(r => fin1(r === 'granted'), () => fin1(false)); } catch (e) { fin1(false); }
+    } else { if (DO) listenTilt(); go(); }
+  });
 
   function openBig(m) {
     if (state !== 'fin') return;
@@ -294,6 +412,8 @@
   addEventListener('resize', layout);
   prepare().then(() => {
     layout();
+    if (q.has('sc')) { SC.t0 = +q.get('sc'); SC.x = W / 2; SC.y = G.cy; }
+    if (q.has('tilt')) { tilt.on = true; tilt.x = tilt.tx = +q.get('tilt'); tilt.y = tilt.ty = .6 * tilt.x; }
     if (AT != null) { gate.style.display = 'none'; if (AT >= END) sea.classList.add('is-fin'); playAll(); }
     else { gate.disabled = false; gate.classList.add('ready'); gateMsg.textContent = 'Bosing'; }
     requestAnimationFrame(frame);

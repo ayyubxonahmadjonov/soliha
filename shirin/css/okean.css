@@ -14,6 +14,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .bloom{position:absolute;left:50%;top:0;width:10px;height:10px;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;
   background:radial-gradient(closest-side,rgba(255,196,214,.75),rgba(255,120,160,.30) 45%,rgba(120,160,255,.10) 70%,transparent)}
 .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.fx--top{z-index:58;will-change:transform}
 .shade{position:absolute;inset:0;z-index:55;pointer-events:none;background:linear-gradient(180deg,rgba(0,10,30,.62) 0%,rgba(0,10,30,.34) 14%,transparent 30%),radial-gradient(130% 95% at 50% 45%,transparent 60%,rgba(0,6,20,.5) 100%)}
 
 .tiles{position:absolute;inset:0;perspective:900px;pointer-events:none}
