@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 11;
+  const V = 12;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
@@ -40,22 +40,18 @@
   const inHeart = (x, y) => { let c = false; for (let i = 0, j = HEART.length - 1; i < HEART.length; j = i++) { const [xi, yi] = HEART[i], [xj, yj] = HEART[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
   function heartCells(HW, need) {
     const u = HW / 32;
+    let best = null, cost = 1e9;
     for (let cols = 7; cols <= 21; cols += 2) { // odd, so one column sits in the cleft and one at the tip
-      const w = HW / cols, h = w * 4 / 3, rows = Math.ceil(30 * u / h) + 1;
-      let best = null;
-      // nudge the outline a little in or out until it holds exactly as many cells as there are pictures: nobody has to appear twice
-      for (let k = 0; k <= 18; k++) for (const sgn of k ? [-1, 1] : [1]) {
-        const sc = 1.05 + sgn * k * .01; if (sc < .94 || sc > 1.14) continue;
-        const out = [];
-        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-          const x = -HW / 2 + (c + .5) * w, y = -14.6 * u + (r + .5) * h;
-          if (inHeart(x / u / sc, (-y / u - 2.45) / sc)) out.push({ x, y });
-        }
-        if (out.length >= need && (!best || out.length < best.length)) best = out;
+      const w = HW / cols, h = w * 4 / 3, rows = Math.ceil(30 * u / h) + 1, out = [];
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const x = -HW / 2 + (c + .5) * w, y = -14.6 * u + (r + .5) * h;
+        if (inHeart(x / u / 1.05, (-y / u - 2.45) / 1.05)) out.push({ x, y });
       }
-      if (best) return { cells: best, w, h };
+      // the shape never bends to the count: a few spare cells get a second look at a photo, a few spare photos simply stay out of the heart
+      const c = Math.abs(out.length - need);
+      if (c < cost) { cost = c; best = { cells: out, w, h }; }
     }
-    return null;
+    return best;
   }
 
   function build() {
@@ -68,6 +64,10 @@
     for (let i = 0; list.length < n; i++) list.push((imgs.length ? imgs : MEDIA)[i % (imgs.length || MEDIA.length)]);
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
     const cells = hc.cells.slice().sort((a, b) => (b.y - a.y) || (Math.abs(a.x) - Math.abs(b.x)));
+    // more pictures than cells: every video keeps its place, the last photos in the shuffle drift on past the heart
+    const seat = new Map(); let left = list.length - n;
+    for (let i = list.length - 1; i >= 0 && left > 0; i--) if (list[i].k === 'i') { seat.set(i, -1); left--; }
+    for (let i = 0, j = 0; i < list.length; i++) if (!seat.has(i)) seat.set(i, j < n ? j++ : -1);
     const order = cells.map((_, i) => i); // which tile takes which cell
     for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
 
@@ -93,20 +93,20 @@
       el.appendChild(node); tilesEl.appendChild(el);
       const star = m.n === STAR; // his favourite: always nearest, biggest, and the middle of the heart
       const z0 = m.k === 'v' ? .7 + .3 * r() : Math.pow(r(), .85), z = star ? 1 : z0;
-      const rank = order[i];
+      const out = seat.get(i) < 0, rank = out ? 0 : order[seat.get(i)];
       const sc = star ? 1.24 : lerp(.34, 1.06, Math.pow(z, 1.4)), bz = star ? 46 : 1 + Math.round(z * 40);
       el.style.zIndex = bz; if (star) el.classList.add('star');
       el.style.setProperty('--tint', (lerp(.5, .04, z)).toFixed(2));
       el.addEventListener('click', () => openBig(m));
       return {
-        el, m, z, sc, i, bz, star: star ? 1 : 0, sk: hash(i, 9), vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
+        el, m, z, sc, i, bz, star: star ? 1 : 0, sk: hash(i, 9), vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, out, cell: cells[rank], stag: 1.9 * rank / n,
         t0: star ? 0 : B0 - .3 + 10.6 * Math.pow(i / n, 1.5), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
     });
-    const S = tiles.find(T => T.star);
+    const S = tiles.find(T => T.star && !T.out);
     if (S) { // she takes the cell at the heart of the heart
-      const C = tiles.reduce((a, b) => (a.cell.x ** 2 + a.cell.y ** 2 <= b.cell.x ** 2 + b.cell.y ** 2 ? a : b));
+      const C = tiles.filter(T => !T.out).reduce((a, b) => (a.cell.x ** 2 + a.cell.y ** 2 <= b.cell.x ** 2 + b.cell.y ** 2 ? a : b));
       [S.cell, C.cell] = [C.cell, S.cell]; [S.stag, C.stag] = [C.stag, S.stag];
     }
     G = { HW, cw, ch, hs: hc.w * .93 / cw, cx: W / 2, cy: Math.max(H * .41, HW * .56 + H * .06), n };
@@ -254,6 +254,8 @@
     for (const T of tiles) {
       const s = T.el.style;
       if (t < T.t0 && t < GATHER) { s.opacity = 0; continue; }
+      if (T.out && t > GATHER + 1.4) { if (!T.home) { T.home = true; s.opacity = 0; s.transform = 'translate3d(-9999px,0,0)'; } continue; }
+      if (T.out) T.home = false;
       // adrift
       const m = G.ch * T.sc, SPAN = H + 2 * m;
       // the one he looked at first hangs alone in the middle until the song comes in, then the sea takes it like the rest
@@ -271,7 +273,8 @@
         op = span(t, .15, 1.1);
       }
       // home
-      const g0 = GATHER + T.stag, g = span(t, g0, g0 + 1.62);
+      const g0 = GATHER + T.stag, g = T.out ? 0 : span(t, g0, g0 + 1.62);
+      if (T.out) op *= 1 - span(t, GATHER, GATHER + 1.3);
       if (g > 0) {
         const p = eio(g), hx = G.cx + T.cell.x * hb, hy = G.cy + T.cell.y * hb + bob;
         const dx = hx - x, dy = hy - y, arc = Math.sin(Math.PI * p) * T.swirl;
