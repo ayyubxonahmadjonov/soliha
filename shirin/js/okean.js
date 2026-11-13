@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 1;
+  const V = 2;
 
   // the song: 67.4 bpm, first downbeat at B0
   const BEAT = .89, B0 = .71, END = 19.39;
@@ -58,10 +58,11 @@
     const order = cells.map((_, i) => i); // which tile takes which cell
     for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
 
-    const cw = clamp(W * .34, 104, 172), ch = cw * 4 / 3;
+    const cw = clamp(W * .305, 94, 156), ch = cw * 4 / 3;
     document.documentElement.style.setProperty('--cw', cw + 'px');
     document.documentElement.style.setProperty('--ch', ch + 'px');
     tilesEl.textContent = '';
+    let vn = 0;
     tiles = list.map((m, i) => {
       const el = document.createElement('div'); el.className = 'tl';
       let node;
@@ -80,7 +81,7 @@
       el.style.setProperty('--tint', (lerp(.5, .04, z)).toFixed(2));
       el.addEventListener('click', () => openBig(m));
       return {
-        el, m, z, sc, i, cell: cells[rank], stag: 1.9 * rank / n,
+        el, m, z, sc, i, vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
         t0: .3 + 9.2 * Math.pow(i / n, 1.25), v: lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
@@ -154,7 +155,7 @@
       let y = H + m - (run - pass * SPAN);
       let x = W * lerp(.1, .9, hash(T.i, pass)) + Math.sin(t * T.fr + T.ph) * T.sw;
       let sc = T.sc * (1 + .05 * p0 * T.z), rz = T.tilt + Math.sin(t * T.fr * .8 + T.ph) * 5, ry = Math.sin(t * .7 + T.ph) * 16, rx = Math.cos(t * .55 + T.ph) * 7;
-      let op = T.op * span(t, T.t0, T.t0 + .5), tint = T.tint;
+      let op = T.op * span(t, T.t0, T.t0 + .5);
       // home
       const g0 = GATHER + T.stag, g = span(t, g0, g0 + 1.62);
       if (g > 0) {
@@ -163,9 +164,15 @@
         x = lerp(x, hx, p) - dy * arc; y = lerp(y, hy, p) + dx * arc;
         sc = lerp(sc, G.hs * hb, p) * (1 + .16 * Math.sin(Math.PI * span(t, g0 + 1.5, g0 + 1.95)));
         rz = lerp(rz, 0, p) + 200 * T.swirl * (1 - p) * p; ry = lerp(ry, 0, p); rx = lerp(rx, 0, p);
-        op = lerp(op, 1, span(g, 0, .5)); tint = lerp(tint, 0, p);
-        s.zIndex = g >= 1 ? 50 : 60;
-        s.setProperty('--tint', tint.toFixed(2));
+        op = lerp(op, 1, span(g, 0, .5));
+      }
+      // only touch what changed: these writes are what make a phone stutter mid-flight
+      const zi = g <= 0 ? 0 : g >= 1 ? 50 : 60;
+      if (zi !== T.zi) { T.zi = zi; s.zIndex = zi || 1 + Math.round(T.z * 40); }
+      if ((g > 0) !== T.home) { T.home = g > 0; T.el.classList.toggle('home', T.home); }
+      if (T.vid) { // eighteen decoders at once is too much while everything is flying
+        const on = !(t >= GATHER - .05 && t < WHOLE + .5 + T.vi * .1);
+        if (on !== T.on) { T.on = on; if (on) { const pr = T.vid.play(); if (pr) pr.catch(() => {}); } else T.vid.pause(); }
       }
       s.opacity = op.toFixed(3);
       s.transform = `translate3d(${(x - G.cw / 2).toFixed(1)}px,${(y - G.ch / 2).toFixed(1)}px,0) rotateX(${rx.toFixed(1)}deg) rotateY(${ry.toFixed(1)}deg) rotate(${rz.toFixed(1)}deg) scale(${sc.toFixed(4)})`;
