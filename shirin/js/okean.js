@@ -8,10 +8,10 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 2;
+  const V = 3;
 
   // the song: 67.4 bpm, first downbeat at B0
-  const BEAT = .89, B0 = .71, END = 19.39;
+  const BEAT = .89, B0 = 3.61, END = 22.29;
   const beat = k => B0 + k * BEAT;
   const GATHER = beat(15), WHOLE = beat(19);
 
@@ -82,7 +82,7 @@
       el.addEventListener('click', () => openBig(m));
       return {
         el, m, z, sc, i, vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, cell: cells[rank], stag: 1.9 * rank / n,
-        t0: .3 + 9.2 * Math.pow(i / n, 1.25), v: lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
+        t0: .3 + 12 * Math.pow(i / n, 1.2), v: lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
     });
@@ -137,7 +137,7 @@
   function render(t, bt) {
     if (!G) return;
     const D = sink(t), p0 = pulse(bt) * span(t, B0 - .05, B0 + .05);
-    const d = eio(span(t, .4, 13.5));
+    const d = eio(span(t, .4, 16.4));
     deep.style.opacity = (d * .97).toFixed(3);
     rays.style.opacity = ((1 - .78 * d) * (.5 + .3 * p0) * span(t, 0, .8)).toFixed(3);
     rays.style.transform = `rotate(${(Math.sin(t * .31) * 3.2).toFixed(2)}deg) translateX(${(Math.sin(t * .23 + 1) * 3).toFixed(2)}%)`;
