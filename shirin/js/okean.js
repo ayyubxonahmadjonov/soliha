@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 3;
+  const V = 5;
 
   // the song: 67.4 bpm, first downbeat at B0
   const BEAT = .89, B0 = 3.61, END = 22.29;
@@ -70,7 +70,11 @@
         node = document.createElement('video');
         node.muted = true; node.defaultMuted = true; node.loop = true; node.playsInline = true; node.autoplay = true; node.preload = 'auto';
         node.setAttribute('muted', ''); node.setAttribute('playsinline', '');
-        node.poster = `${DIR}${m.n}.webp?v=${V}`; node.src = `${DIR}${m.n}.mp4?v=${V}`;
+        node.className = 'vd'; node.src = `${DIR}${m.n}.mp4?v=${V}`;
+        // her still sits underneath; the video only shows once it is truly running, so a phone that refuses one never leaves a black card
+        const still = new Image(); still.alt = ''; still.draggable = false; still.src = m.url || `${DIR}${m.n}.webp?v=${V}`; el.appendChild(still);
+        node.addEventListener('timeupdate', () => { if (node.currentTime > 0 && !node.paused) node.classList.add('live'); });
+        ['error', 'emptied', 'abort'].forEach(ev => node.addEventListener(ev, () => node.classList.remove('live')));
       } else { node = new Image(); node.decoding = 'async'; node.alt = ''; node.src = (m.url || `${DIR}${m.n}.webp?v=${V}`); }
       node.draggable = false;
       el.appendChild(node); tilesEl.appendChild(el);
@@ -170,10 +174,6 @@
       const zi = g <= 0 ? 0 : g >= 1 ? 50 : 60;
       if (zi !== T.zi) { T.zi = zi; s.zIndex = zi || 1 + Math.round(T.z * 40); }
       if ((g > 0) !== T.home) { T.home = g > 0; T.el.classList.toggle('home', T.home); }
-      if (T.vid) { // eighteen decoders at once is too much while everything is flying
-        const on = !(t >= GATHER - .05 && t < WHOLE + .5 + T.vi * .1);
-        if (on !== T.on) { T.on = on; if (on) { const pr = T.vid.play(); if (pr) pr.catch(() => {}); } else T.vid.pause(); }
-      }
       s.opacity = op.toFixed(3);
       s.transform = `translate3d(${(x - G.cw / 2).toFixed(1)}px,${(y - G.ch / 2).toFixed(1)}px,0) rotateX(${rx.toFixed(1)}deg) rotateY(${ry.toFixed(1)}deg) rotate(${rz.toFixed(1)}deg) scale(${sc.toFixed(4)})`;
     }
@@ -225,7 +225,8 @@
       render(tNow, tNow);
     } else { tNow = END + (performance.now() - finAt) / 1000; render(tNow, clock()); }
   }
-  function playAll() { tilesEl.querySelectorAll('video').forEach(v => { const p = v.play(); if (p) p.catch(() => {}); }); }
+  function playAll() { tilesEl.querySelectorAll('video').forEach(v => { if (v.error) { v.classList.remove('live'); v.load(); } if (!v.paused && !v.ended) return; const p = v.play(); if (p) p.catch(() => {}); }); }
+  setInterval(() => { if (state !== 'wait' && !document.hidden) playAll(); }, 1200); // a phone may stall one; nudge it back
   function start() {
     state = 'play'; sea.classList.remove('is-fin');
     song.loop = false; song.volume = 1;
@@ -267,7 +268,7 @@
   function prepare() {
     let done = 0; const total = MEDIA.length + 1;
     const step = x => { done++; gateBar.style.width = `${Math.round(done / total * 100)}%`; return x; };
-    const pics = MEDIA.map(m => fetchRetry(`${DIR}${m.n}.webp?v=${V}`).then(b => { if (m.k === 'i') m.url = URL.createObjectURL(b); }).then(step, step));
+    const pics = MEDIA.map(m => fetchRetry(`${DIR}${m.n}.webp?v=${V}`).then(b => { m.url = URL.createObjectURL(b); }).then(step, step));
     const audio = fetchRetry(`assets/audio/okean.mp3?v=${V}`).then(b => { song.src = URL.createObjectURL(b); }, () => { song.src = `assets/audio/okean.mp3?v=${V}`; }).then(step);
     const fonts = document.fonts && document.fonts.ready ? document.fonts.ready.catch(() => {}) : 0;
     return Promise.all([...pics, audio, fonts]);
