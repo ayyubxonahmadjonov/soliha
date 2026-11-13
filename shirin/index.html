@@ -3,113 +3,63 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f7ecdc">
+<meta name="theme-color" content="#06182f">
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="data:,">
-<title>Shirinlik</title>
+<title>Okean</title>
 <link rel="preload" href="assets/fonts/Fraunces-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Manrope.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/shirin.css?v=5">
+<link rel="stylesheet" href="css/okean.css?v=1">
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <filter id="melt" x="-10%" y="-20%" width="120%" height="160%">
-    <feTurbulence type="fractalNoise" baseFrequency=".012 .05" numOctaves="2" seed="3" result="n"/>
-    <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G" id="meltMap"/>
-  </filter>
-</svg>
-
-<!-- The show: a bar of chocolate whose pieces turn into photos, then the box they came in. -->
-<main class="stage" id="stage" aria-live="polite">
-  <div class="glow" id="glow"></div>
-  <div class="drips" id="drips" aria-hidden="true"></div>
-  <div class="slab" id="slab"></div>
-  <div class="pieces" id="pieces"></div>
-
-  <div class="box" id="box" aria-hidden="true">
-    <div class="box__in" id="boxIn">
-      <div class="face face--front"><div class="art"></div></div>
-      <div class="face face--back">
-        <div class="label">
-          <b class="label__h">Tarkibi</b>
-          <dl class="label__t">
-            <dt>Shirinlik</dt><dd>100%</dd>
-            <dt>Kulgi</dt><dd>100%</dd>
-            <dt>Hazil</dt><dd>bir chimdim</dd>
-            <dt>Kaloriya</dt><dd>0</dd>
-          </dl>
-          <p class="label__p">Saqlash muddati: cheksiz.<br>Sovutish shart emas.</p>
-          <i class="label__bar"></i>
-          <p class="label__n">8 2026 1111</p>
-        </div>
-      </div>
-      <div class="face face--left"></div>
-      <div class="face face--right"></div>
-      <div class="face face--top"></div>
-      <div class="face face--bottom"></div>
-    </div>
-  </div>
-
-  <div class="say say--top">
-    <p class="ln ln--pair" data-in="wa" data-out="drop">
-      <span data-in="wa">Dunyoda shokolad ko‘p.</span>
-      <span data-in="wa2">Bunisi esa bitta.</span>
-    </p>
-    <p class="ln ln--pair" data-in="wc" data-out="gather">
-      <span data-in="wc">Shirinlik tez tugaydi.</span>
-      <span data-in="wc2">Bunisi — <em>hech qachon.</em></span>
-    </p>
-    <p class="ln ttl" id="ttl" data-in="wt" data-out="never">
-      <span data-in="wt">Shirinlikdek</span>
-      <span data-in="wt2b">shirin bo‘ling.</span>
-    </p>
-    <p class="ln sub" data-in="wt2" data-out="never">Kuningiz ham shirin o‘tsin.</p>
-  </div>
-
-  <div class="say say--low">
-    <p class="ln" data-in="wb" data-out="wc">Har bo‘lagida bitta xotira bor.</p>
-  </div>
-
+<!-- The dive: the deeper it goes, the more of her there is, until it all settles into one shape. -->
+<main class="sea" id="sea">
+  <div class="sea__deep" id="deep"></div>
+  <div class="rays" id="rays"></div>
+  <div class="bloom" id="bloom"></div>
   <canvas class="fx" id="fx" aria-hidden="true"></canvas>
-  <div class="flash" id="flash"></div>
+  <div class="tiles" id="tiles"></div>
+  <div class="shade"></div>
+
+  <div class="say" aria-live="polite">
+    <p class="ln" data-in="1" data-out="5">Bitta rasmingizga qaragandim, xolos.</p>
+    <p class="ln" data-in="6" data-out="10">Keyin yana bittasiga. Yana&hellip;</p>
+    <p class="ln" data-in="11" data-out="15">Endi esa <em>cho‘kib ketyapman.</em></p>
+  </div>
+  <div class="end" id="end">
+    <p class="end__t">Qutqarish shart emas.</p>
+    <p class="end__s">Tinch okeanidan ham chuqur ekan.</p>
+  </div>
 
   <div class="fin" id="fin">
     <p class="fin__hint">Rasmlarga bosib ko‘ring</p>
-    <div class="fin__row">
-      <button class="fin__btn" id="again" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>Yana bir bor</button>
-      <button class="fin__btn fin__btn--fill" id="keep" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Saqlab olish</button>
-    </div>
+    <button class="btn" id="again" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>Yana bir bor</button>
   </div>
 </main>
 
-<!-- The wrapper: tearing it open is the tap that lets the song play. -->
-<div class="gate" id="gate">
-  <button class="pack" id="pack" type="button" aria-label="Qutini ochish" disabled>
-    <span class="pack__shadow"></span>
-    <span class="pack__part pack__half pack__half--l"><span class="art"></span></span>
-    <span class="pack__part pack__half pack__half--r"><span class="art"></span></span>
-    <span class="pack__part pack__flap" id="flap"><span class="art"></span></span>
-    <span class="pack__part pack__whole"><span class="art"></span></span>
-  </button>
-  <p class="gate__msg" id="gateMsg">Tayyorlanmoqda…</p>
-  <span class="gate__bar"><i id="gateBar"></i></span>
-  <p class="gate__sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>Ovozni balandroq qiling, quti qo‘shiq bilan ochiladi</p>
-</div>
+<!-- The surface: one tap is the dive, and the tap that lets the song play. -->
+<button class="gate" id="gate" type="button" disabled aria-label="Sho‘ng‘ish">
+  <span class="gate__moon"></span>
+  <span class="gate__txt">
+    <small>Soliha uchun</small>
+    <b>Sho‘ng‘iymizmi?</b>
+  </span>
+  <span class="gate__water">
+    <svg class="wave wave--3" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="M0 30 Q75 0 150 30 T300 30 T450 30 T600 30 T750 30 T900 30 T1050 30 T1200 30 V60 H0Z"/></svg>
+    <svg class="wave wave--2" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="M0 30 Q75 4 150 30 T300 30 T450 30 T600 30 T750 30 T900 30 T1050 30 T1200 30 V60 H0Z"/></svg>
+    <svg class="wave wave--1" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="M0 30 Q75 8 150 30 T300 30 T450 30 T600 30 T750 30 T900 30 T1050 30 T1200 30 V60 H0Z"/></svg>
+    <span class="gate__cta"><i></i><span id="gateMsg">Tayyorlanmoqda…</span></span>
+    <span class="gate__bar"><i id="gateBar"></i></span>
+    <span class="gate__sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>Ovozni balandroq qiling</span>
+  </span>
+</button>
 
 <button class="resume" id="resume" type="button" hidden>Davom ettirish</button>
-<div class="lb" id="lb" hidden><img alt=""></div>
-<!-- a phone wallpaper of the box and its photos, made on her own phone -->
-<div class="wp" id="wp" hidden>
-  <img alt="Shokolad qutisi: telefon foni uchun rasm">
-  <div class="wp__bar">
-    <button class="fin__btn fin__btn--fill" id="wpSave" type="button">Rasmlarga saqlash</button>
-    <button class="fin__btn" id="wpClose" type="button">Yopish</button>
-  </div>
-  <p class="wp__hint">Yoki rasmni bosib turing va “Rasmlarga qo‘shish”ni tanlang</p>
-</div>
+<div class="lb" id="lb" hidden></div>
 
 <audio id="song" preload="auto" playsinline></audio>
-<script src="js/shirin.js?v=8"></script>
+<script src="js/media.js?v=1"></script>
+<script src="js/okean.js?v=1"></script>
 </body>
 </html>

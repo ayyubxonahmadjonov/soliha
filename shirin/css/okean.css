@@ -1,0 +1,76 @@
+@font-face{font-family:Fraunces;font-style:italic;font-weight:300 700;font-display:swap;src:url(../assets/fonts/Fraunces-italic.woff2) format("woff2")}
+@font-face{font-family:Manrope;font-weight:300 800;font-display:swap;src:url(../assets/fonts/Manrope.woff2) format("woff2")}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#020a1c;color:#fff;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+
+/* ---------- the sea ---------- */
+.sea{position:fixed;inset:0;overflow:hidden;background:linear-gradient(180deg,#2aa6c2 0%,#127a9e 34%,#0a4f7a 68%,#07335c 100%)}
+.sea__deep{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#0b3a66 0%,#06204a 42%,#030f2a 74%,#01060f 100%);opacity:0;will-change:opacity}
+.rays{position:absolute;inset:-12% -40% 0;transform-origin:50% 0;mix-blend-mode:screen;will-change:transform,opacity;
+  background:repeating-linear-gradient(96deg,rgba(255,255,255,0) 0 5%,rgba(190,240,255,.20) 8%,rgba(255,255,255,0) 12.5%,rgba(190,240,255,.10) 15%,rgba(255,255,255,0) 19%);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 82%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 82%)}
+.bloom{position:absolute;left:50%;top:0;width:10px;height:10px;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;
+  background:radial-gradient(closest-side,rgba(255,196,214,.75),rgba(255,120,160,.30) 45%,rgba(120,160,255,.10) 70%,transparent)}
+.fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.shade{position:absolute;inset:0;z-index:55;pointer-events:none;background:linear-gradient(180deg,rgba(0,10,30,.62) 0%,rgba(0,10,30,.34) 14%,transparent 30%),radial-gradient(130% 95% at 50% 45%,transparent 60%,rgba(0,6,20,.5) 100%)}
+
+.tiles{position:absolute;inset:0;perspective:900px;pointer-events:none}
+.tl{position:absolute;left:0;top:0;width:var(--cw);height:var(--ch);border-radius:9%/6.75%;overflow:hidden;background:#0a2a4a;
+  box-shadow:0 0 0 1px rgba(255,255,255,.22),0 10px 28px rgba(0,8,24,.45);will-change:transform,opacity;backface-visibility:hidden;opacity:0}
+.tl>img,.tl>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.tl::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#1d7fa6,#07305c);opacity:var(--tint,0);pointer-events:none}
+.sea.is-fin .tl{pointer-events:auto;cursor:pointer}
+
+/* ---------- words ---------- */
+.say{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 9vh);height:0;z-index:60;pointer-events:none}
+.ln{position:absolute;left:7vw;right:7vw;text-align:center;font:italic 400 clamp(21px,6.4vw,34px)/1.2 Fraunces,Georgia,serif;letter-spacing:-.01em;
+  text-shadow:0 2px 18px rgba(0,16,40,.75),0 0 2px rgba(0,16,40,.6);opacity:0;will-change:transform,opacity}
+.ln em{font-weight:600;color:#ffd0dc}
+.end{position:absolute;left:0;right:0;text-align:center;z-index:60;pointer-events:none;opacity:0;will-change:transform,opacity}
+.end__t{font:italic 500 clamp(26px,8.2vw,44px)/1.1 Fraunces,Georgia,serif;letter-spacing:-.015em;text-shadow:0 2px 22px rgba(0,10,30,.8)}
+.end__s{margin-top:.7em;font-size:clamp(12px,3.5vw,15px);letter-spacing:.14em;text-transform:uppercase;color:rgba(214,236,255,.78)}
+
+.fin{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 3.2vh);z-index:70;display:flex;flex-direction:column;align-items:center;gap:10px;opacity:0;pointer-events:none;transform:translateY(12px);transition:opacity .7s .5s,transform .7s .5s}
+.sea.is-fin .fin{opacity:1;pointer-events:auto;transform:none}
+.fin__hint{font-size:12px;letter-spacing:.08em;color:rgba(214,236,255,.6)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:600;background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn:active{transform:scale(.96)}
+
+/* ---------- the surface ---------- */
+.gate{position:fixed;inset:0;z-index:100;display:block;width:100%;overflow:hidden;text-align:center;
+  background:linear-gradient(180deg,#0a0f2e 0%,#1b1f52 30%,#4a3a78 50%,#c9788c 62%,#f3b79a 66%);
+  transition:transform 1.25s cubic-bezier(.7,0,.25,1)}
+.gate.open{transform:translateY(-104%);pointer-events:none}
+.gate__moon{position:absolute;left:50%;top:15%;width:74px;height:74px;margin-left:-37px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#fffdf4,#f5e7c8 60%,#e4cfa6);box-shadow:0 0 60px 18px rgba(255,236,196,.28),0 0 140px 60px rgba(255,220,190,.14)}
+.gate__txt{position:absolute;left:0;right:0;top:33%;display:block}
+.gate__txt small{display:block;font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+.gate__txt b{display:block;margin-top:.35em;font:italic 500 clamp(34px,11vw,56px)/1.05 Fraunces,Georgia,serif;letter-spacing:-.02em;text-shadow:0 2px 30px rgba(10,10,50,.5)}
+.gate__water{position:absolute;left:0;right:0;top:64%;bottom:0;display:block;background:linear-gradient(180deg,#2aa6c2 0%,#127a9e 34%,#0a4f7a 68%,#07335c 100%)}
+.wave{position:absolute;left:0;bottom:calc(100% - 1px);width:200%;height:34px;display:block;animation:swell 7s linear infinite}
+.wave path{fill:#2aa6c2}
+.wave--2{height:44px;animation-duration:11s;animation-direction:reverse}.wave--2 path{fill:#5cc3d6;opacity:.55}
+.wave--3{height:56px;animation-duration:16s}.wave--3 path{fill:#f6c9b4;opacity:.35}
+@keyframes swell{to{transform:translateX(-50%)}}
+.gate__cta{position:absolute;left:0;right:0;top:22%;display:flex;flex-direction:column;align-items:center;gap:14px;font-size:14px;font-weight:600;letter-spacing:.04em}
+.gate__cta i{width:58px;height:58px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.75);position:relative;opacity:.35;transition:opacity .4s}
+.gate__cta i::before{content:"";position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-11px 0 0 -7px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(45deg)}
+.gate.ready .gate__cta i{opacity:1;animation:dip 1.8s ease-in-out infinite}
+.gate.ready .gate__cta i::after{content:"";position:absolute;inset:-9px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.5);animation:ring 1.8s ease-out infinite}
+@keyframes dip{50%{transform:translateY(7px)}}
+@keyframes ring{from{transform:scale(.8);opacity:.9}to{transform:scale(1.5);opacity:0}}
+.gate__bar{position:absolute;left:50%;top:calc(22% + 108px);width:120px;height:2px;margin-left:-60px;border-radius:2px;background:rgba(255,255,255,.2);overflow:hidden;transition:opacity .4s}
+.gate__bar i{display:block;height:100%;width:0;background:#fff;transition:width .25s}
+.gate.ready .gate__bar{opacity:0}
+.gate__sound{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 22px);display:flex;justify-content:center;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.62)}
+.gate__sound svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.resume{position:fixed;left:50%;top:50%;z-index:200;transform:translate(-50%,-50%);padding:14px 26px;border-radius:999px;font-weight:700;background:#fff;color:#06204a;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.lb{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(1,8,22,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:lbin .25s ease}
+.lb[hidden]{display:none}
+.lb>*{max-width:92vw;max-height:86vh;border-radius:14px;box-shadow:0 20px 70px rgba(0,0,0,.6);animation:lbpop .35s cubic-bezier(.2,1.2,.3,1)}
+@keyframes lbin{from{opacity:0}}
+@keyframes lbpop{from{transform:scale(.86);opacity:0}}
+@media (prefers-reduced-motion:reduce){.wave,.gate__cta i{animation:none!important}}
