@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 8;
+  const V = 9;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
@@ -116,8 +116,8 @@
     c.width = cw; c.height = chh;
     const x = c.getContext('2d');
     x.font = `italic 500 ${fs}px Fraunces, Georgia, serif`; x.textBaseline = 'middle';
-    const gap = fs * .075, ws = [...'Soliha'].map(ch => x.measureText(ch).width), tw = ws.reduce((a, b) => a + b, 0) + gap * 5;
-    [...'Soliha'].reduce((px, ch, i) => { x.fillText(ch, px, chh / 2); return px + ws[i] + gap; }, (cw - tw) / 2);
+    const gap = fs * .075, ws = [...'Solixa'].map(ch => x.measureText(ch).width), tw = ws.reduce((a, b) => a + b, 0) + gap * 5;
+    [...'Solixa'].reduce((px, ch, i) => { x.fillText(ch, px, chh / 2); return px + ws[i] + gap; }, (cw - tw) / 2);
     const d = x.getImageData(0, 0, cw, chh).data, r = rng(4242);
     let st = Math.max(2.8, fs / 19), pts = [];
     for (let k = 0; k < 6; k++) {
