@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 16;
+  const V = 17;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
@@ -111,14 +111,11 @@
       const el = document.createElement('div'); el.className = 'tl';
       let node;
       if (m.k === 'v') {
-        node = document.createElement('video');
-        node.muted = true; node.defaultMuted = true; node.loop = true; node.playsInline = true; node.preload = 'auto';
-        node.setAttribute('muted', ''); node.setAttribute('playsinline', '');
-        node.className = 'vd'; node.src = `${DIR}${m.n}.mp4?v=${V}`;
-        // her still sits underneath; the video only shows once it is truly running, so a phone that refuses one never leaves a black card
+        // every clip is a window onto one shared video (see reel): a small canvas, painted from it each frame.
+        // Her still sits underneath, so a card is never empty even if the phone will not run the video at all.
+        const c = ATLAS[m.n] || [0, 0, 240, 320];
+        node = document.createElement('canvas'); node.width = c[2]; node.height = c[3]; node.className = 'vd';
         const still = new Image(); still.alt = ''; still.draggable = false; still.src = m.url || `${DIR}${m.n}.webp?v=${V}`; el.appendChild(still);
-        node.addEventListener('timeupdate', () => { if (node.currentTime > 0 && !node.paused) node.classList.add('live'); });
-        ['error', 'emptied', 'abort'].forEach(ev => node.addEventListener(ev, () => node.classList.remove('live')));
       } else { node = new Image(); node.decoding = 'async'; node.alt = ''; node.src = (m.url || `${DIR}${m.n}.webp?v=${V}`); }
       node.draggable = false;
       el.appendChild(node); tilesEl.appendChild(el);
@@ -129,7 +126,7 @@
       el.style.zIndex = bz; if (star) el.classList.add('star');
             el.addEventListener('click', () => openBig(m));
       return {
-        el, m, z, sc, i, bz, star: star ? 1 : 0, sk: hash(i, 9), vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, out, cell: cells[rank], stag: 1.9 * rank / n,
+        el, m, z, sc, i, bz, star: star ? 1 : 0, sk: hash(i, 9), vid: m.k === 'v' ? node : null, cx: m.k === 'v' ? node.getContext('2d') : null, src: m.k === 'v' ? (ATLAS[m.n] || [0, 0, 240, 320]) : null, live: false, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, out, cell: cells[rank], stag: 1.9 * rank / n,
         t0: star ? 0 : B0 - .3 + 11.8 * Math.pow(i / n, 1.5), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
         ph: r() * 6.283, sw: lerp(6, 26, r()), fr: lerp(.35, .8, r()), tilt: lerp(-7, 7, r()), swirl: (r() < .5 ? -1 : 1) * lerp(.25, .6, r()), tint: lerp(.5, .04, z),
       };
@@ -344,7 +341,7 @@
       fx2.style.transform = `translate3d(${(-tilt.x * 9).toFixed(1)}px,${(-tilt.y * 7).toFixed(1)}px,0)`;
       rays.style.transform += ` translateX(${(-tilt.x * 2.5).toFixed(2)}%)`;
     }
-    drawFx(t, bt); drawName(t, bt);
+    paint(); drawFx(t, bt); drawName(t, bt);
   }
 
   function layout() {
@@ -383,32 +380,32 @@
       render(tNow, tNow);
     } else { tNow = END + (performance.now() - finAt) / 1000; render(tNow, clock()); }
   }
-  const MAXV = 6;
-  function playAll() { // (frozen test frames only)
-    tilesEl.querySelectorAll('video').forEach(v => { if (v.error) { v.classList.remove('live'); v.load(); } if (!v.paused && !v.ended) return; const p = v.play(); if (p) p.catch(() => {}); });
-  }
-  // Only a few clips run at any moment: the favourite, then whichever are on screen, taking turns once the heart is whole.
-  // The rest hold their last frame over their own still, so nothing ever goes dark.
-  function cast() {
-    const vs = tiles.filter(T => T.vid && T.vis);
-    const turn = Math.floor(tNow / 3.2);
-    const score = T => (T.star ? 1e6 : 0) + (tNow >= WHOLE ? ((T.vi + turn * 5) % 18) : (T.vid.paused ? 0 : 50) + T.z * 10);
-    vs.sort((a, b) => score(b) - score(a));
-    const on = new Set(vs.slice(0, MAXV));
+  // ---------- the reel: all eighteen clips in a single video ----------
+  // One stream to decode instead of eighteen, so every clip runs the whole time on any phone, in step, with no stalls.
+  const reel = document.createElement('video');
+  reel.muted = true; reel.defaultMuted = true; reel.loop = true; reel.playsInline = true; reel.preload = 'auto';
+  reel.setAttribute('muted', ''); reel.setAttribute('playsinline', ''); reel.className = 'reel';
+  document.body.appendChild(reel);
+  let reelT = -1;
+  function playReel() { if (reel.error) reel.load(); if (reel.paused || reel.ended) { const p = reel.play(); if (p) p.catch(() => {}); } }
+  function paint() {
+    if (reel.readyState < 2) return;
+    const ct = reel.currentTime; if (ct === reelT) return; reelT = ct;
     for (const T of tiles) {
-      const v = T.vid; if (!v) continue;
-      if (on.has(T)) { if (v.error) { v.classList.remove('live'); v.load(); } if (v.paused || v.ended) { const p = v.play(); if (p) p.catch(() => {}); } }
-      else if (!v.paused) v.pause();
+      if (!T.cx || !T.vis) continue;
+      const c = T.src;
+      try { T.cx.drawImage(reel, c[0], c[1], c[2], c[3], 0, 0, c[2], c[3]); } catch (e) { return; }
+      if (!T.live && ct > 0) { T.live = true; T.vid.classList.add('live'); }
     }
   }
-  setInterval(() => { if (state !== 'wait' && !document.hidden && AT == null) cast(); }, 400);
+  setInterval(() => { if (state !== 'wait' && !document.hidden) playReel(); }, 1200); // a phone may stall it; nudge it back
   function start() {
     state = 'play'; sea.classList.remove('is-fin');
     song.loop = false; song.volume = 1; song.muted = false; SC.t0 = -99;
     try { song.currentTime = 0; } catch (e) {}
     aP = performance.now(); aT = 0; lastT = 0;
     const p = song.play(); if (p) p.catch(() => { resume.hidden = false; });
-    cast();
+    playReel();
   }
   function fin() {
     if (state === 'fin') return;
@@ -420,7 +417,7 @@
   song.addEventListener('pause', () => { if (state !== 'wait' && !song.ended && AT == null) setTimeout(() => { if (song.paused) resume.hidden = false; }, 250); });
   song.addEventListener('play', () => { resume.hidden = true; });
   song.addEventListener('ended', () => { if (state === 'play') fin(); });
-  resume.addEventListener('click', () => { resume.hidden = true; const p = song.play(); if (p) p.catch(() => { resume.hidden = false; }); cast(); });
+  resume.addEventListener('click', () => { resume.hidden = true; const p = song.play(); if (p) p.catch(() => { resume.hidden = false; }); playReel(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && state !== 'wait' && song.paused) resume.hidden = false; });
   $('again').addEventListener('click', start);
   // leaning the phone: gyroscope where there is one, the mouse on a desktop
@@ -442,7 +439,7 @@
     const DO = window.DeviceOrientationEvent;
     if (DO && typeof DO.requestPermission === 'function') {
       // iPhone asks before it shares its tilt. The song is woken (silently) inside this same tap so it is still free to play once she has answered.
-      song.muted = true; const p = song.play(); if (p) p.catch(() => {});
+      song.muted = true; const p = song.play(); if (p) p.catch(() => {}); playReel();
       let done = false; const fin1 = ok => { if (done) return; done = true; if (ok) listenTilt(); go(); };
       try { DO.requestPermission().then(r => fin1(r === 'granted'), () => fin1(false)); } catch (e) { fin1(false); }
     } else { if (DO) listenTilt(); go(); }
@@ -464,12 +461,13 @@
       .catch(e => tries > 1 ? new Promise(ok => setTimeout(ok, 600)).then(() => fetchRetry(url, tries - 1)) : Promise.reject(e));
   }
   function prepare() {
-    let done = 0; const total = MEDIA.length + 1;
+    let done = 0; const total = MEDIA.length + 2;
     const step = x => { done++; gateBar.style.width = `${Math.round(done / total * 100)}%`; return x; };
     const pics = MEDIA.map(m => fetchRetry(`${DIR}${m.n}.webp?v=${V}`).then(b => { m.url = URL.createObjectURL(b); }).then(step, step));
     const audio = fetchRetry(`assets/audio/okean.mp3?v=${V}`).then(b => { song.src = URL.createObjectURL(b); }, () => { song.src = `assets/audio/okean.mp3?v=${V}`; }).then(step);
+    const film = fetchRetry(`${DIR}atlas.mp4?v=${V}`).then(b => { reel.src = URL.createObjectURL(b); }, () => { reel.src = `${DIR}atlas.mp4?v=${V}`; }).then(step);
     const fonts = document.fonts && document.fonts.ready ? document.fonts.ready.catch(() => {}) : 0;
-    return Promise.all([...pics, audio, fonts]);
+    return Promise.all([...pics, audio, film, fonts]);
   }
 
   seedFx();
@@ -478,7 +476,7 @@
     layout();
     if (q.has('sc')) { SC.t0 = +q.get('sc'); SC.x = W / 2; SC.y = G.cy; }
     if (q.has('tilt')) { tilt.on = true; tilt.x = tilt.tx = +q.get('tilt'); tilt.y = tilt.ty = .6 * tilt.x; }
-    if (AT != null) { gate.style.display = 'none'; if (AT >= END) sea.classList.add('is-fin'); playAll(); }
+    if (AT != null) { gate.style.display = 'none'; if (AT >= END) sea.classList.add('is-fin'); playReel(); }
     else { gate.disabled = false; gate.classList.add('ready'); gateMsg.textContent = 'Bosing'; }
     requestAnimationFrame(frame);
   });

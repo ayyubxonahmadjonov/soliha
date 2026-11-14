@@ -20,7 +20,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .tiles{position:absolute;inset:0;perspective:900px;pointer-events:none}
 .tl{position:absolute;left:0;top:0;width:var(--cw);height:var(--ch);border-radius:9%/6.75%;overflow:hidden;background:#0a2a4a;
   box-shadow:0 0 0 1px rgba(255,255,255,.22),0 3px 8px rgba(0,8,24,.5);will-change:transform,opacity;backface-visibility:hidden;opacity:0}
-.tl>img,.tl>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.tl>img,.tl>canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .tl>.vd{opacity:0;transition:opacity .35s}
 .tl>.vd.live{opacity:1}
 .tl.star{box-shadow:0 0 0 1.5px rgba(255,214,226,.9),0 0 26px rgba(255,150,185,.45),0 10px 28px rgba(0,8,24,.5)}
@@ -79,3 +79,4 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 @keyframes lbin{from{opacity:0}}
 @keyframes lbpop{from{transform:scale(.86);opacity:0}}
 @media (prefers-reduced-motion:reduce){.wave,.gate__cta i{animation:none!important}}
+.reel{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:1}
