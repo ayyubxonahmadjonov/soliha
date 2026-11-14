@@ -8,7 +8,7 @@
   const lines = [...document.querySelectorAll('.ln')];
   const MEDIA = window.MEDIA || [];
   const DIR = 'assets/m/';
-  const V = 14;
+  const V = 16;
 
   // the song: 67.4 bpm, first downbeat at B0
   const STAR = 'v59';
@@ -112,7 +112,7 @@
       let node;
       if (m.k === 'v') {
         node = document.createElement('video');
-        node.muted = true; node.defaultMuted = true; node.loop = true; node.playsInline = true; node.autoplay = true; node.preload = 'auto';
+        node.muted = true; node.defaultMuted = true; node.loop = true; node.playsInline = true; node.preload = 'auto';
         node.setAttribute('muted', ''); node.setAttribute('playsinline', '');
         node.className = 'vd'; node.src = `${DIR}${m.n}.mp4?v=${V}`;
         // her still sits underneath; the video only shows once it is truly running, so a phone that refuses one never leaves a black card
@@ -127,8 +127,7 @@
       const out = seat.get(i) < 0, rank = out ? 0 : order[seat.get(i)];
       const sc = star ? 1.24 : lerp(.34, 1.06, Math.pow(z, 1.4)), bz = star ? 46 : 1 + Math.round(z * 40);
       el.style.zIndex = bz; if (star) el.classList.add('star');
-      el.style.setProperty('--tint', (lerp(.5, .04, z)).toFixed(2));
-      el.addEventListener('click', () => openBig(m));
+            el.addEventListener('click', () => openBig(m));
       return {
         el, m, z, sc, i, bz, star: star ? 1 : 0, sk: hash(i, 9), vid: m.k === 'v' ? node : null, vi: vn += m.k === 'v' ? 1 : 0, on: true, zi: 0, home: false, out, cell: cells[rank], stag: 1.9 * rank / n,
         t0: star ? 0 : B0 - .3 + 11.8 * Math.pow(i / n, 1.5), v: star ? .27 : lerp(.085, .34, z), op: lerp(.5, 1, Math.pow(z, .7)),
@@ -211,7 +210,7 @@
       for (const f of fish) {
         if ((pass === 1) !== f.gold) continue;
         if (t - NAME0 - f.d < 0) continue;
-        fishPos(f, t, _a); fishPos(f, t - .05, _b);
+        fishPos(f, t, _a); if (_a.p < 1) fishPos(f, t - .05, _b); else { _b.x = _a.x; _b.y = _a.y; }
         let x = _a.x, y = _a.y, dx = _a.x - _b.x, dy = _a.y - _b.y;
         let ang = Math.atan2(dy, dx) * (1 - span(_a.p, .8, 1)) + Math.sin(t * 2.2 + f.ph) * .16 * _a.p;
         if (SC.k > 0) { const ex = x - SC.x, ey = y - SC.y, el = Math.hypot(ex, ey) || 1, m = SC.k * (26 + 60 * f.sk); x += ex / el * m; y += ey / el * m; ang = lerp(ang, Math.atan2(ey, ex), Math.min(1, SC.k * 3) * (SC.out ? 1 : 0)) + (SC.out ? 0 : Math.PI * SC.k); }
@@ -284,9 +283,9 @@
 
     for (const T of tiles) {
       const s = T.el.style;
-      if (t < T.t0 && t < GATHER) { s.opacity = 0; continue; }
-      if (T.out && t > GATHER + 1.4) { if (!T.home) { T.home = true; s.opacity = 0; s.transform = 'translate3d(-9999px,0,0)'; } continue; }
-      if (T.out) T.home = false;
+      if (t < T.t0 && t < GATHER) { s.opacity = 0; T.vis = false; continue; }
+      if (T.out && t > GATHER + 1.4) { if (!T.home) { T.home = true; s.opacity = 0; s.transform = 'translate3d(-9999px,0,0)'; } T.vis = false; continue; }
+      if (T.out && T.home) T.home = false;
       // adrift
       const m = G.ch * T.sc, SPAN = H + 2 * m;
       // the one he looked at first hangs alone in the middle until the song comes in, then the sea takes it like the rest
@@ -316,10 +315,10 @@
         if (SC.k > 0) { const ex = hx - SC.x, ey = hy - SC.y, el = Math.hypot(ex, ey) || 1, m = SC.k * (W * .2 + G.HW * .55 * T.sk); x += ex / el * m; y += ey / el * m; rz += SC.k * T.swirl * 150; ry += SC.k * 40 * (T.sk - .5); sc *= 1 - .1 * SC.k; }
         op = lerp(op, 1, span(g, 0, .5));
       }
+      T.vis = g > 0 || (y > -m && y < H + m);
       // only touch what changed: these writes are what make a phone stutter mid-flight
       const zi = g <= 0 ? 0 : g >= 1 ? 50 : 60;
       if (zi !== T.zi) { T.zi = zi; s.zIndex = zi ? zi + T.star * 2 : T.bz; }
-      if ((g > 0) !== T.home) { T.home = g > 0; T.el.classList.toggle('home', T.home); }
       s.opacity = op.toFixed(3);
       s.transform = `translate3d(${(x - G.cw / 2).toFixed(1)}px,${(y - G.ch / 2).toFixed(1)}px,0) rotateX(${rx.toFixed(1)}deg) rotateY(${ry.toFixed(1)}deg) rotate(${rz.toFixed(1)}deg) scale(${sc.toFixed(4)})`;
     }
@@ -351,7 +350,8 @@
   function layout() {
     W = innerWidth; H = innerHeight;
     const dpr = Math.min(devicePixelRatio || 1, 2);
-    fx.width = fx2.width = Math.round(W * dpr); fx.height = fx2.height = Math.round(H * dpr);
+    fx.width = Math.round(W * Math.min(dpr, 1.5)); fx.height = Math.round(H * Math.min(dpr, 1.5)); // bubbles are soft anyway
+    fx2.width = Math.round(W * dpr); fx2.height = Math.round(H * dpr);
     build();
   }
 
@@ -360,10 +360,16 @@
   const AT = q.has('at') ? parseFloat(q.get('at')) : null;
   let state = 'wait', aP = 0, aT = 0, finAt = 0, tNow = 0;
 
+  // The song is the clock, but a phone reports its position in coarse steps. Snapping to each report makes the
+  // film hitch; instead time runs on the screen's own clock and is only leaned, gently, toward the song.
+  let lastT = 0;
   function clock() {
     const ct = song.currentTime, n = performance.now();
     let est = aT + (n - aP) / 1000;
-    if (song.paused || Math.abs(est - ct) > .09) { aP = n; aT = ct; est = ct; }
+    const err = ct - est;
+    if (song.paused || Math.abs(err) > .3) { aP = n; aT = ct; est = ct; lastT = ct; return est; }
+    aT += err * .03;
+    est = Math.max(lastT, est + err * .03); lastT = est;
     return est;
   }
   function frame() {
@@ -377,15 +383,32 @@
       render(tNow, tNow);
     } else { tNow = END + (performance.now() - finAt) / 1000; render(tNow, clock()); }
   }
-  function playAll() { tilesEl.querySelectorAll('video').forEach(v => { if (v.error) { v.classList.remove('live'); v.load(); } if (!v.paused && !v.ended) return; const p = v.play(); if (p) p.catch(() => {}); }); }
-  setInterval(() => { if (state !== 'wait' && !document.hidden) playAll(); }, 1200); // a phone may stall one; nudge it back
+  const MAXV = 6;
+  function playAll() { // (frozen test frames only)
+    tilesEl.querySelectorAll('video').forEach(v => { if (v.error) { v.classList.remove('live'); v.load(); } if (!v.paused && !v.ended) return; const p = v.play(); if (p) p.catch(() => {}); });
+  }
+  // Only a few clips run at any moment: the favourite, then whichever are on screen, taking turns once the heart is whole.
+  // The rest hold their last frame over their own still, so nothing ever goes dark.
+  function cast() {
+    const vs = tiles.filter(T => T.vid && T.vis);
+    const turn = Math.floor(tNow / 3.2);
+    const score = T => (T.star ? 1e6 : 0) + (tNow >= WHOLE ? ((T.vi + turn * 5) % 18) : (T.vid.paused ? 0 : 50) + T.z * 10);
+    vs.sort((a, b) => score(b) - score(a));
+    const on = new Set(vs.slice(0, MAXV));
+    for (const T of tiles) {
+      const v = T.vid; if (!v) continue;
+      if (on.has(T)) { if (v.error) { v.classList.remove('live'); v.load(); } if (v.paused || v.ended) { const p = v.play(); if (p) p.catch(() => {}); } }
+      else if (!v.paused) v.pause();
+    }
+  }
+  setInterval(() => { if (state !== 'wait' && !document.hidden && AT == null) cast(); }, 400);
   function start() {
     state = 'play'; sea.classList.remove('is-fin');
     song.loop = false; song.volume = 1; song.muted = false; SC.t0 = -99;
     try { song.currentTime = 0; } catch (e) {}
-    aP = performance.now(); aT = 0;
+    aP = performance.now(); aT = 0; lastT = 0;
     const p = song.play(); if (p) p.catch(() => { resume.hidden = false; });
-    playAll();
+    cast();
   }
   function fin() {
     if (state === 'fin') return;
@@ -397,7 +420,7 @@
   song.addEventListener('pause', () => { if (state !== 'wait' && !song.ended && AT == null) setTimeout(() => { if (song.paused) resume.hidden = false; }, 250); });
   song.addEventListener('play', () => { resume.hidden = true; });
   song.addEventListener('ended', () => { if (state === 'play') fin(); });
-  resume.addEventListener('click', () => { resume.hidden = true; const p = song.play(); if (p) p.catch(() => { resume.hidden = false; }); playAll(); });
+  resume.addEventListener('click', () => { resume.hidden = true; const p = song.play(); if (p) p.catch(() => { resume.hidden = false; }); cast(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && state !== 'wait' && song.paused) resume.hidden = false; });
   $('again').addEventListener('click', start);
   // leaning the phone: gyroscope where there is one, the mouse on a desktop
