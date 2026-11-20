@@ -975,11 +975,33 @@ window.__gul = { prepWallpaper, get wpBlob() { return wpBlob; }, get G() { retur
   var yes = document.getElementById('ansYes'), no = document.getElementById('ansNo'),
       row = document.getElementById('askRow'), rep = document.getElementById('ansReply');
   function answer(ok){
-    row.style.display = 'none';
+    row.style.display = 'none'; no.style.display = 'none'; yes.style.display = 'none';
     rep.textContent = ok ? 'Rahmat, Soliha 💛' : 'Tushundim 🤍 Baxtli bo\u2018ling.';
     rep.classList.add('on');
     ping(ok ? '\ud83d\udc9a\ud83d\udc9a\ud83d\udc9a Soliha \u00abHA\u00bb ni bosdi \u2014 imkon berdi!' : '\ud83e\udd0d Soliha \u00abYo\u2018q\u00bb ni bosdi.');
   }
   yes.addEventListener('click', function(){ answer(true); });
-  no.addEventListener('click', function(){ answer(false); });
+
+  /* the "Yoʻq" button is shy: it darts around a few times with playful lines,
+     then settles so she can still, truly, say no if she means it. */
+  var LINES = ['Shoshmang 🙈', 'Balki oʻylab koʻrarsiz? 🥺', 'Yana bittagina oʻylang 💭', 'Rostdanmi? 🐾', 'Mayli… sizga havola 🤍'];
+  var dodges = 0, MAX = 5, lastFlee = 0;
+  function flee(){
+    var pad = 16, w = no.offsetWidth || 120, h = no.offsetHeight || 54;
+    var x = pad + Math.random() * Math.max(1, window.innerWidth - w - pad * 2);
+    var y = pad + Math.random() * Math.max(1, window.innerHeight - h - pad * 2);
+    no.style.position = 'fixed'; no.style.left = x + 'px'; no.style.top = y + 'px'; no.style.margin = '0';
+    yes.style.transform = 'scale(' + (1 + dodges * 0.09) + ')';
+    rep.textContent = LINES[Math.min(dodges, LINES.length) - 1] || LINES[0];
+    rep.classList.add('on');
+  }
+  no.addEventListener('mouseenter', function(){            // desktop: run from the cursor (does not count toward settling)
+    if (dodges >= MAX) return;
+    var now = Date.now(); if (now - lastFlee < 250) return; lastFlee = now;
+    dodges++; flee();
+  });
+  no.addEventListener('click', function(e){               // tap/board: dart away a few times, then let her mean it
+    if (dodges < MAX){ e.preventDefault(); dodges++; flee(); return; }
+    answer(false);
+  });
 })();
