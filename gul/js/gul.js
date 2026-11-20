@@ -960,3 +960,26 @@ if (AT != null) {
 requestAnimationFrame(function first(now) { lastNow = now; frame(now); });
 window.__gul = { prepWallpaper, get wpBlob() { return wpBlob; }, get G() { return G; }, get t() { return clock(performance.now()); }, get mode() { return mode; }, freeze(t) { mode = 'frozen'; freeBase = t; }, DROP, WHOLE, END, bar, beatAt };
 })();
+
+/* after the flower, the question — and a quiet ping to Telegram with her answer.
+   the bot token lives in the Vercel relay, never in this public page. */
+(function(){
+  var RELAY = 'https://soliha-tilak.vercel.app/api/tilak';
+  function ping(t){ try { var b = new FormData(); b.set('text', t); fetch(RELAY, { method:'POST', body:b, keepalive:true })['catch'](function(){}); } catch (e) {} }
+  var ask = document.getElementById('ask'), fin = document.getElementById('fin');
+  if (!ask || !fin) return;
+  var shown = false;
+  function reveal(){ if (shown) return; shown = true; ask.hidden = false; }
+  var mo = new MutationObserver(function(){ if (fin.classList.contains('show')) setTimeout(reveal, 2600); });
+  mo.observe(fin, { attributes:true, attributeFilter:['class'] });
+  var yes = document.getElementById('ansYes'), no = document.getElementById('ansNo'),
+      row = document.getElementById('askRow'), rep = document.getElementById('ansReply');
+  function answer(ok){
+    row.style.display = 'none';
+    rep.textContent = ok ? 'Rahmat, Soliha 💛' : 'Tushundim 🤍 Baxtli bo\u2018ling.';
+    rep.classList.add('on');
+    ping(ok ? '\ud83d\udc9a\ud83d\udc9a\ud83d\udc9a Soliha \u00abHA\u00bb ni bosdi \u2014 imkon berdi!' : '\ud83e\udd0d Soliha \u00abYo\u2018q\u00bb ni bosdi.');
+  }
+  yes.addEventListener('click', function(){ answer(true); });
+  no.addEventListener('click', function(){ answer(false); });
+})();
