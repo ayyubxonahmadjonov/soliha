@@ -239,7 +239,7 @@ function heartGeo(W, H, { top, availH }) {
 }
 
 /* ================= her name, in petals ================= */
-const NAME = 'Soliha';
+const NAME = 'Solixa';
 const nameSize = (W, H) => cl(Math.min(W * .19, H * .105), 44, 118);
 /* where the petals settle: the name is set in the page's own italic on a hidden canvas and read back as dots */
 function sampleName(x0, y0, fs, rnd = mulberry(5)) {
@@ -959,49 +959,4 @@ if (AT != null) {
 } else prepare();
 requestAnimationFrame(function first(now) { lastNow = now; frame(now); });
 window.__gul = { prepWallpaper, get wpBlob() { return wpBlob; }, get G() { return G; }, get t() { return clock(performance.now()); }, get mode() { return mode; }, freeze(t) { mode = 'frozen'; freeBase = t; }, DROP, WHOLE, END, bar, beatAt };
-})();
-
-/* after the flower, the question — and a quiet ping to Telegram with her answer.
-   the bot token lives in the Vercel relay, never in this public page. */
-(function(){
-  var RELAY = 'https://soliha-tilak.vercel.app/api/tilak';
-  function ping(t){ try { var b = new FormData(); b.set('text', t); fetch(RELAY, { method:'POST', body:b, keepalive:true })['catch'](function(){}); } catch (e) {} }
-  var ask = document.getElementById('ask'), fin = document.getElementById('fin');
-  if (!ask || !fin) return;
-  var shown = false;
-  function reveal(){ if (shown) return; shown = true; ask.hidden = false; }
-  var mo = new MutationObserver(function(){ if (fin.classList.contains('show')) setTimeout(reveal, 2600); });
-  mo.observe(fin, { attributes:true, attributeFilter:['class'] });
-  var yes = document.getElementById('ansYes'), no = document.getElementById('ansNo'),
-      row = document.getElementById('askRow'), rep = document.getElementById('ansReply');
-  function answer(ok){
-    row.style.display = 'none'; no.style.display = 'none'; yes.style.display = 'none';
-    rep.textContent = ok ? 'Rahmat, Soliha 💛' : 'Tushundim 🤍 Baxtli bo\u2018ling.';
-    rep.classList.add('on');
-    ping(ok ? '\ud83d\udc9a\ud83d\udc9a\ud83d\udc9a Soliha \u00abHA\u00bb ni bosdi \u2014 imkon berdi!' : '\ud83e\udd0d Soliha \u00abYo\u2018q\u00bb ni bosdi.');
-  }
-  yes.addEventListener('click', function(){ answer(true); });
-
-  /* the "Yoʻq" button is shy: it darts around a few times with playful lines,
-     then settles so she can still, truly, say no if she means it. */
-  var LINES = ['Shoshmang 🙈', 'Balki oʻylab koʻrarsiz? 🥺', 'Yana bittagina oʻylang 💭', 'Rostdanmi? 🐾', 'Mayli… sizga havola 🤍'];
-  var dodges = 0, MAX = 5, lastFlee = 0;
-  function flee(){
-    var pad = 16, w = no.offsetWidth || 120, h = no.offsetHeight || 54;
-    var x = pad + Math.random() * Math.max(1, window.innerWidth - w - pad * 2);
-    var y = pad + Math.random() * Math.max(1, window.innerHeight - h - pad * 2);
-    no.style.position = 'fixed'; no.style.left = x + 'px'; no.style.top = y + 'px'; no.style.margin = '0';
-    yes.style.transform = 'scale(' + (1 + dodges * 0.09) + ')';
-    rep.textContent = LINES[Math.min(dodges, LINES.length) - 1] || LINES[0];
-    rep.classList.add('on');
-  }
-  no.addEventListener('mouseenter', function(){            // desktop: run from the cursor (does not count toward settling)
-    if (dodges >= MAX) return;
-    var now = Date.now(); if (now - lastFlee < 250) return; lastFlee = now;
-    dodges++; flee();
-  });
-  no.addEventListener('click', function(e){               // tap/board: dart away a few times, then let her mean it
-    if (dodges < MAX){ e.preventDefault(); dodges++; flee(); return; }
-    answer(false);
-  });
 })();
